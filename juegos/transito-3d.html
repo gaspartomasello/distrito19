@@ -1202,6 +1202,7 @@
             rearWheelMeshes.push(rrMesh);
 
             // Spawn bus at (0, 0, -25) facing center street
+            guideTarget = null;
             busGroup.position.set(0, 0, -25);
             scene.add(busGroup);
         }
@@ -1628,31 +1629,64 @@
             updateCamera();
         }
 
+        let guideTarget = null;
+        let guidePoints = [];
+        function planGuide(from,to) {
+            const road = value => Math.max(-100,Math.min(100,Math.round(value/50)*50));
+            const candidates = [];
+            for (const startHorizontal of [true,false]) {
+                const startRoad = road(startHorizontal ? from.z : from.x);
+                const endHorizontal = Math.abs(to.z-road(to.z)) < Math.abs(to.x-road(to.x));
+                const endRoad = road(endHorizontal ? to.z : to.x);
+                const points = [];
+                if (startHorizontal !== endHorizontal) {
+                    points.push(new THREE.Vector3(startHorizontal ? endRoad : startRoad,0,
+                        startHorizontal ? startRoad : endRoad));
+                } else if (startRoad !== endRoad) {
+                    const crossing = road(startHorizontal ? to.x : to.z);
+                    points.push(new THREE.Vector3(startHorizontal ? crossing : startRoad,0,
+                        startHorizontal ? startRoad : crossing));
+                    points.push(new THREE.Vector3(startHorizontal ? crossing : endRoad,0,
+                        startHorizontal ? endRoad : crossing));
+                }
+                points.push(to);
+                let cost = Math.abs((startHorizontal ? from.z : from.x)-startRoad)*5;
+                let previous = from;
+                for (const point of points) {
+                    cost += previous.distanceTo(point);
+                    previous = point;
+                }
+                candidates.push({cost,points});
+            }
+            return candidates.sort((a,b)=>a.cost-b.cost)[0].points;
+        }
+
         function updateStopsLogic() {
             const busPos = busGroup.position;
             const target = (passengersOnBoard >= maxPassengers || activeStopIndex >= busStops.length)
                 ? terminalStop
                 : busStops[activeStopIndex];
 
-            const road = value => Math.max(-100, Math.min(100, Math.round(value / 50) * 50));
-            const roadX = road(busPos.x), roadZ = road(busPos.z);
-            const targetX = road(target.pos.x), targetZ = road(target.pos.z);
-            const onHorizontal = Math.abs(busPos.z-roadZ) <= Math.abs(busPos.x-roadX);
-            const targetHorizontal = Math.abs(target.pos.z-targetZ) <= Math.abs(target.pos.x-targetX);
-            let guideX = target.pos.x, guideZ = target.pos.z;
-            if (onHorizontal && !(targetHorizontal && roadZ === targetZ)) {
-                guideX = targetX;
-                guideZ = Math.abs(busPos.x-targetX) > 5 ? roadZ : target.pos.z;
-            } else if (!onHorizontal && !(!targetHorizontal && roadX === targetX)) {
-                guideZ = targetZ;
-                guideX = Math.abs(busPos.z-targetZ) > 5 ? roadX : target.pos.x;
+            if (guideTarget !== target) {
+                guideTarget = target;
+                guidePoints = planGuide(busPos,target.pos);
             }
+            while (guidePoints.length > 1 && busPos.distanceTo(guidePoints[0]) < 7) {
+                guidePoints.shift();
+            }
+            const guide = guidePoints[0];
+            const guideX = guide.x, guideZ = guide.z;
             waypointArrow.position.set(
                 busPos.x + Math.sin(busHeading)*6, 5.8,
                 busPos.z + Math.cos(busHeading)*6
             );
-            const guideAngle = Math.atan2(guideX-busPos.x, guideZ-busPos.z);
-            waypointArrow.rotation.y = guideAngle;
+            waypointArrow.visible = busPos.distanceTo(target.pos) >= 6.5;
+            if (waypointArrow.visible) {
+                const desired = Math.atan2(guideX-busPos.x,guideZ-busPos.z);
+                const delta = desired-waypointArrow.rotation.y;
+                waypointArrow.rotation.y += Math.atan2(Math.sin(delta),Math.cos(delta))*0.18;
+            }
+            const guideAngle = waypointArrow.rotation.y;
             // Tilt toward the chase camera while preserving the arrow's map heading.
             const tilt = cameraMode === 0 ? Math.PI / 5 : 0;
             const relativeHeading = busHeading - guideAngle;
