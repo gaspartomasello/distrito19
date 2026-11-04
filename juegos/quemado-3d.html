@@ -1,98 +1,210 @@
 <!doctype html>
 <html lang="es-AR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quemado 3D · Mathias Bejarano</title>
+<title>Quemado 3D · Mathias</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#101427;color:#fff;font:16px system-ui}canvas{display:block}button,a{background:#ffd66b;color:#16172a;border:0;border-radius:.6rem;padding:.8rem 1rem;font:inherit;font-weight:800;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid white;outline-offset:3px}#cover{position:fixed;inset:0;display:grid;place-items:center;background:#101427d9;padding:1rem;overflow:auto}#cover[hidden]{display:none}article{max-width:34rem;background:#222844;padding:clamp(1rem,5vw,2.6rem);border-radius:1rem;border-top:5px solid #ff535e}h1{font-size:clamp(2.5rem,9vw,5rem);line-height:1;margin:.3em 0}li{margin:.6rem 0}#status{position:fixed;top:8px;left:8px;background:#101427e8;border-radius:.5rem;padding:.7rem;pointer-events:none}#controls{position:fixed;bottom:12px;left:12px;right:12px;display:none;justify-content:space-between;gap:8px;touch-action:none}#controls button{touch-action:none}@media(pointer:coarse){#controls{display:flex}}
+*{box-sizing:border-box}body{margin:0;background:#11192c;color:#fff;font:16px system-ui}canvas{display:block;touch-action:none}button,a{background:#ffd36a;color:#16172a;border:0;border-radius:.6rem;padding:.75rem 1rem;font:inherit;font-weight:800;cursor:pointer;touch-action:none}button:focus-visible,a:focus-visible{outline:3px solid white}#cover{position:fixed;inset:0;display:grid;place-items:center;background:#11192cda;padding:1rem;overflow:auto}#cover[hidden],#touch[hidden]{display:none}article{max-width:34rem;background:#233052;padding:clamp(1rem,5vw,2.5rem);border-radius:1rem;border-top:6px solid #ff565f}h1{font-size:clamp(2.5rem,9vw,5rem);line-height:1;margin:.25em 0}#hud{position:fixed;top:12px;left:12px;background:#11192ce8;padding:.65rem;border-radius:.5rem;pointer-events:none}#aim{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;font-size:25px;text-shadow:0 0 4px black}#power{position:fixed;bottom:22%;left:50%;transform:translateX(-50%);width:160px;accent-color:#ff565f}#touch{position:fixed;bottom:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:end;pointer-events:none}#touch button{pointer-events:auto}
 </style>
-<div id="status" aria-live="polite"></div>
-<div id="controls"><div><button data-key="KeyA" aria-label="Izquierda">◀</button> <button data-key="KeyD" aria-label="Derecha">▶</button></div><button id="throw">Lanzar</button></div>
-<div id="cover"><article><small>ESCUELA 23 · MUESTRA DE VIDEOJUEGOS</small><h1>Quemado 3D</h1><p><strong>Mathias Bejarano · 6.º A</strong></p><p id="result">Partida individual contra tres rivales.</p><ol><li>Movete con <strong>A y D</strong>, las flechas o los botones del celu.</li><li>Apuntá con el cursor y hacé clic en la cancha para lanzar. Con <strong>Espacio</strong> o <strong>Lanzar</strong> apuntás al rival más cercano a tu línea.</li><li>Eliminá a los tres rivales antes de perder tus tres vidas. Los rivales también tiran.</li></ol><button id="play">Jugar</button></article></div>
+<div id="hud"></div><div id="aim" aria-hidden="true">+</div><progress id="power" max="1" value="0" hidden aria-label="Potencia"></progress>
+<div id="touch" hidden><div><button data-key="KeyW" aria-label="Avanzar">▲</button><br><button data-key="KeyA" aria-label="Izquierda">◀</button> <button data-key="KeyS" aria-label="Retroceder">▼</button> <button data-key="KeyD" aria-label="Derecha">▶</button></div><button id="shoot">Lanzar</button></div>
+<div id="cover"><article><small>ESCUELA 23 · MUESTRA DE VIDEOJUEGOS</small><h1>Quemado 3D</h1><p><strong>Mathias Bejarano · 6.º A</strong></p><p id="result">Una pelota, tres rivales y tres vidas.</p><ul><li>Movete con WASD. Mirá con el mouse o arrastrá sobre la cancha en el celu.</li><li>Acercate a la pelota quieta para recogerla. Mantené apretado el clic izquierdo para cargar potencia y soltalo para lanzar. En el celu, usá <strong>Lanzar</strong>.</li><li>Esquivá los tiros y quemá a los tres rivales. Ellos también tienen que recoger la pelota.</li></ul><button id="play">Jugar</button> <a id="back" href="../Escuela_23_3D.html">Volver a la escuela</a></article></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const get=id=>document.getElementById(id);
-if (!window.THREE) {
-  get('result').textContent='No se pudo cargar Three.js. Revisá la conexión y recargá.';
-  get('play').disabled=true;
-} else {
-const T=THREE, scene=new T.Scene();
-scene.background=new T.Color('#191f36');
-const camera=new T.PerspectiveCamera(47,1,.1,100);
-camera.position.set(0,18,17);camera.lookAt(0,0,0);
-const renderer=new T.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));document.body.prepend(renderer.domElement);
-function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
-addEventListener('resize',resize);resize();
-scene.add(new T.HemisphereLight(0xffffff,0x696082,1.2));
-const light=new T.DirectionalLight(0xffffff,.7);light.position.set(3,10,5);scene.add(light);
-function mesh(geo,color,x,y,z){const m=new T.Mesh(geo,new T.MeshStandardMaterial({color}));m.position.set(x,y,z);scene.add(m);return m}
-mesh(new T.BoxGeometry(15,.2,20),0x48617f,0,-.11,0);
-for(const z of [-9.8,0,9.8])mesh(new T.BoxGeometry(14.8,.02,.08),0xf7eacb,0,0,z);
-for(const x of [-7.4,7.4])mesh(new T.BoxGeometry(.08,.02,19.6),0xf7eacb,x,0,0);
-const actor=new T.CylinderGeometry(.43,.58,1.5,12);
-const player=mesh(actor,0x60e3ff,0,.75,7);
-const bots=[-4,0,4].map(x=>({x,mesh:mesh(actor,0xff6c72,x,.75,-6)}));
-const ballGeo=new T.SphereGeometry(.23,12,8);
-const keys=new Set(), shots=[];
-let playing=false,lives=3,clock=0,nextEnemy=0,nextThrow=0,immuneUntil=0;
-function hud(){get('status').textContent='Vidas '+lives+' · Rivales '+bots.filter(b=>b.mesh.visible).length}
-function clearShots(){for(const shot of shots){scene.remove(shot.mesh);shot.mesh.material.dispose()}shots.length=0}
-get('play').onclick=()=>{
- clearShots();lives=3;clock=0;nextEnemy=1.5;nextThrow=0;immuneUntil=0;keys.clear();player.position.x=0;
- for(const bot of bots){bot.mesh.visible=true;bot.mesh.position.x=bot.x}
- get('cover').hidden=true;playing=true;hud();
-};
-function launch(from,x,z,friendly){
- const dx=x-from.x,dz=z-from.z,dist=Math.hypot(dx,dz);
- if(dist<.01)return;
- shots.push({mesh:mesh(ballGeo,friendly?0xff4b50:0xffc450,from.x,.75,from.z),vx:dx/dist*15,vz:dz/dist*15,friendly});
+if(parent!==window)get('back').hidden=true;
+try { init(); } catch {
+ get('result').textContent='No se pudo iniciar el 3D. Verificá la conexión y que el navegador tenga WebGL.';
+ get('play').disabled=true;
 }
-function throwBall(x,z){
- if(!playing||clock<nextThrow)return;
- const target=bots.filter(b=>b.mesh.visible).sort((a,b)=>Math.abs(a.mesh.position.x-player.position.x)-Math.abs(b.mesh.position.x-player.position.x))[0];
- if(!target)return;
- nextThrow=clock+.48;launch(player.position,x??target.mesh.position.x,z??target.mesh.position.z,true);
-}
-const ray=new T.Raycaster(), plane=new T.Plane(new T.Vector3(0,1,0),0), aim=new T.Vector3();
-renderer.domElement.addEventListener('pointerdown',e=>{
- ray.setFromCamera({x:2*e.clientX/innerWidth-1,y:1-2*e.clientY/innerHeight},camera);
- if(ray.ray.intersectPlane(plane,aim)&&aim.z<0)throwBall(aim.x,aim.z);
-});
-get('throw').onclick=()=>throwBall();
-addEventListener('keydown',e=>{
- if(!playing||!['KeyA','KeyD','ArrowLeft','ArrowRight','Space'].includes(e.code))return;
- e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat)throwBall();
-});
-addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',()=>keys.clear());
-for(const b of document.querySelectorAll('[data-key]')){
- b.onpointerdown=e=>{b.setPointerCapture(e.pointerId);keys.add(b.dataset.key)};
- for(const type of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(type,()=>keys.delete(b.dataset.key));
-}
-function finish(won){playing=false;clearShots();get('result').textContent=won?'¡Ganaste la partida!':'Te quedaste sin vidas.';get('play').textContent='Volver a jugar';get('cover').hidden=false;get('play').focus()}
-function touches(x,z,nx,nz,target){
- const dx=nx-x,dz=nz-z;
- const t=Math.max(0,Math.min(1,((target.x-x)*dx+(target.z-z)*dz)/(dx*dx+dz*dz||1)));
- return (target.x-x-dx*t)**2+(target.z-z-dz*t)**2<=.81**2;
-}
-function step(dt){
- clock+=dt;
- const left=keys.has('KeyA')||keys.has('ArrowLeft'),right=keys.has('KeyD')||keys.has('ArrowRight');
- player.position.x=T.MathUtils.clamp(player.position.x+(Number(right)-Number(left))*8*dt,-6.8,6.8);
- const rivals=bots.filter(b=>b.mesh.visible);
- for(const b of rivals)b.mesh.position.x=b.x+Math.sin(clock*1.65+b.x)*1.45;
- if(clock>=nextEnemy&&rivals.length){const b=rivals[Math.floor(Math.random()*rivals.length)];launch(b.mesh.position,player.position.x+(Math.random()-.5)*2,7,false);nextEnemy=clock+1.25}
- for(let i=shots.length-1;i>=0;i--){
-  const shot=shots[i],p=shot.mesh.position,nx=p.x+shot.vx*dt,nz=p.z+shot.vz*dt;
-  const rival=shot.friendly&&rivals.find(b=>b.mesh.visible&&touches(p.x,p.z,nx,nz,b.mesh.position));
-  const hit=!shot.friendly&&touches(p.x,p.z,nx,nz,player.position);
-  if(rival){rival.mesh.visible=false;hud()}
-  if(hit&&clock>=immuneUntil){lives--;immuneUntil=clock+.65;hud()}
-  if(rival||hit||Math.abs(nx)>7.5||Math.abs(nz)>10){scene.remove(shot.mesh);shot.mesh.material.dispose();shots.splice(i,1)}
-  else p.set(nx,.75,nz);
+function init(){
+ const T=THREE, scene=new T.Scene();
+ scene.background=new T.Color(0x99bdcf);scene.fog=new T.Fog(0x99bdcf,28,68);
+ const camera=new T.PerspectiveCamera(69,1,.04,85);camera.rotation.order='YXZ';
+ const renderer=new T.WebGLRenderer({antialias:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));document.body.prepend(renderer.domElement);
+ const canvas=renderer.domElement;
+ function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+ addEventListener('resize',resize);resize();
+ scene.add(new T.HemisphereLight(0xffffff,0x7d8199,1.15));
+ const sun=new T.DirectionalLight(0xfff0d0,.65);sun.position.set(-5,12,5);scene.add(sun);
+ const cube=new T.BoxGeometry(1,1,1), head=new T.SphereGeometry(.24,12,8);
+ function part(parent,geo,color,x,y,z,w=1,h=1,d=1){
+  const mesh=new T.Mesh(geo,new T.MeshLambertMaterial({color}));
+  mesh.position.set(x,y,z);mesh.scale.set(w,h,d);parent.add(mesh);return mesh;
  }
- if(!lives||bots.every(b=>!b.mesh.visible))finish(lives>0);
-}
-let last=performance.now();
-renderer.setAnimationLoop(now=>{const dt=Math.min((now-last)/1000,.04);last=now;if(playing&&dt>0)step(dt);renderer.render(scene,camera)});
+ part(scene,cube,0x396c75,0,-.11,0,18,.2,24);
+ for(const x of [-8.8,8.8]){
+  part(scene,cube,0xf3ebbf,x,0,0,.08,.02,23.6);
+  part(scene,cube,0x34475c,x,1.05,0,.25,2.1,24);
+ }
+ for(const z of [-11.8,0,11.8])part(scene,cube,0xf3ebbf,0,0,z,17.6,.02,.08);
+ for(const z of [-12,12])part(scene,cube,0x34475c,0,1.05,z,18,2.1,.25);
+ const actor=(x,z,shirt,skin)=>{
+  const model=new T.Group();scene.add(model);model.position.set(x,0,z);
+  part(model,cube,shirt,0,1.12,0,.63,.65,.36);
+  part(model,head,skin,0,1.67,0);
+  part(model,head,0x30282a,0,1.82,-.035,.98,.47,1);
+  const limbs=[];
+  for(const side of [-1,1]){
+   part(model,cube,0x29242a,side*.08,1.70,.222,.045,.045,.025);
+   const arm=part(model,cube,skin,side*.42,1.08,0,.17,.55,.17);
+   const leg=part(model,cube,0x263354,side*.17,.43,0,.23,.66,.24);
+   part(model,cube,0xf6eee2,side*.17,.08,.08,.25,.16,.36);
+   limbs.push({arm,leg,side});
+  }
+  return {model,limbs,x,z};
+ };
+ const bots=[actor(-4,-6,0xef525c,0xc68c64),actor(0,-8,0xffa549,0x8e5438),actor(4,-6,0x8b6cf2,0xeab08c)];
+ const radius=.22, ball=part(scene,new T.SphereGeometry(radius,16,12),0xf33048,0,radius,1);
+ const velocity=new T.Vector3(), direction=new T.Vector3(), old=new T.Vector3();
+ const player=new T.Vector3(), keys=new Set();
+ const touch=get('touch'), power=get('power'), coarse=matchMedia('(pointer:coarse)').matches;
+ let active=false, yaw=0,pitch=0,lives=3,clock=0,charge=null,owner=null,thrower=null,inFlight=false,throwAt=0,immune=0,drag=null;
+ function look(dx,dy){yaw-=dx*.003;pitch=T.MathUtils.clamp(pitch-dy*.003,-1.12,1.12)}
+ function resetBall(x,z){owner=null;thrower=null;inFlight=false;velocity.set(0,0,0);ball.position.set(x,radius,z)}
+ function updateHud(){
+  const text='Vidas '+lives+' · Rivales '+bots.filter(b=>b.model.visible).length+' · '+(owner===player?'Tenés la pelota':owner?'Rival con pelota':inFlight?'Pelota en juego':'Buscá la pelota');
+  if(get('hud').textContent!==text)get('hud').textContent=text;
+ }
+ get('play').onclick=()=>{
+  clock=0;lives=3;immune=0;charge=null;power.hidden=true;keys.clear();player.set(0,0,8);yaw=pitch=0;
+  for(const b of bots){b.model.visible=true;b.model.position.set(b.x,0,b.z)}
+  resetBall(0,3);active=true;get('cover').hidden=true;touch.hidden=!coarse;
+  if(!coarse)canvas.requestPointerLock?.()?.catch?.(()=>{});
+ };
+ function beginCharge(){if(active&&owner===player&&charge===null){charge=clock;power.hidden=false}}
+ function launch(shooter,aim,speed){
+  owner=null;thrower=shooter;inFlight=true;
+  velocity.copy(aim).normalize().multiplyScalar(speed);
+ }
+ function release(){
+  if(charge===null)return;
+  const amount=Math.min(1,(clock-charge)/1.15);
+  charge=null;power.hidden=true;
+  if(owner!==player||!active)return;
+  camera.getWorldDirection(direction);
+  launch(player,direction,9+amount*17);
+ }
+ canvas.addEventListener('pointerdown',e=>{
+  if(!active||e.button!==0)return;
+  if(e.pointerType==='touch'){drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);return}
+  if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.()?.catch?.(()=>{});
+  beginCharge();
+ });
+ addEventListener('mousemove',e=>{if(active&&document.pointerLockElement===canvas)look(e.movementX,e.movementY)});
+ canvas.addEventListener('pointermove',e=>{
+  if(drag?.id!==e.pointerId)return;
+  look(e.clientX-drag.x,e.clientY-drag.y);drag.x=e.clientX;drag.y=e.clientY;
+ });
+ addEventListener('pointerup',e=>{if(drag?.id===e.pointerId)drag=null;if(e.pointerType==='mouse'&&e.button===0)release()});
+ addEventListener('pointercancel',e=>{if(drag?.id===e.pointerId)drag=null});
+ addEventListener('blur',()=>{keys.clear();charge=null;power.hidden=true});
+ addEventListener('keydown',e=>{
+  if(active&&['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].includes(e.code)){e.preventDefault();keys.add(e.code)}
+ });
+ addEventListener('keyup',e=>keys.delete(e.code));
+ for(const b of touch.querySelectorAll('[data-key]')){
+  b.onpointerdown=e=>{b.setPointerCapture(e.pointerId);keys.add(b.dataset.key)};
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>keys.delete(b.dataset.key));
+ }
+ get('shoot').onpointerdown=e=>{e.currentTarget.setPointerCapture(e.pointerId);beginCharge()};
+ get('shoot').onpointerup=release;
+ get('shoot').onpointercancel=()=>{charge=null;power.hidden=true};
+ function distance(a,b){return Math.hypot(a.x-b.x,a.z-b.z)}
+ function finish(won){
+  active=false;touch.hidden=true;power.hidden=true;charge=null;
+  if(document.pointerLockElement===canvas)document.exitPointerLock();
+  get('result').textContent=won?'¡Ganaste! Quemaste a los tres rivales.':'Te quedaste sin vidas.';
+  get('play').textContent='Volver a jugar';get('cover').hidden=false;
+ }
+ function hit(position){
+  const dx=ball.position.x-old.x,dz=ball.position.z-old.z;
+  const t=T.MathUtils.clamp(((position.x-old.x)*dx+(position.z-old.z)*dz)/(dx*dx+dz*dz||1),0,1);
+  const y=old.y+(ball.position.y-old.y)*t;
+  return y>=radius&&y<2.02&&Math.hypot(position.x-old.x-dx*t,position.z-old.z-dz*t)<.58;
+ }
+ function updateBall(dt,alive){
+  const p=ball.position;
+  if(owner===player){
+   camera.getWorldDirection(direction);
+   p.copy(camera.position).addScaledVector(direction,.68);p.y-=.22;
+   return;
+  }
+  if(owner){
+   const b=owner.model.position;
+   p.set(b.x+.32,1.21,b.z+.55);
+   if(clock>=throwAt){
+    direction.set(player.x-p.x+(Math.random()-.5)*1.2, .75+distance(player,p)*.11,player.z-p.z);
+    launch(owner,direction,15);
+   }
+   return;
+  }
+  old.copy(p);
+  p.addScaledVector(velocity,dt);
+  velocity.y-=10*dt;
+  if(inFlight){
+   if(thrower!==player&&clock>=immune&&hit(player)){lives--;immune=clock+1;resetBall(player.x,player.z-.8);return}
+   const rival=thrower===player&&alive.find(b=>hit(b.model.position));
+   if(rival){rival.model.visible=false;resetBall(p.x,p.z);return}
+  }
+  if(Math.abs(p.x)>8.55){p.x=Math.sign(p.x)*8.55;velocity.x*=-.45;inFlight=false}
+  if(Math.abs(p.z)>11.55){p.z=Math.sign(p.z)*11.55;velocity.z*=-.45;inFlight=false}
+  if(p.y<=radius){
+   p.y=radius;velocity.y=velocity.y< -1.5?-velocity.y*.35:0;
+   velocity.x*=Math.exp(-6*dt);velocity.z*=Math.exp(-6*dt);inFlight=false;
+   if(velocity.lengthSq()<1.8){
+    if(distance(player,p)<1.05){owner=player;velocity.set(0,0,0)}
+    else {
+     const rival=alive.find(b=>distance(b.model.position,p)<.9);
+     if(rival){owner=rival;throwAt=clock+.7;velocity.set(0,0,0)}
+    }
+   }
+  }
+ }
+ function step(dt){
+  clock+=dt;
+  const axis=(a,b,c,d)=>Number(keys.has(a)||keys.has(b))-Number(keys.has(c)||keys.has(d));
+  const forward=axis('KeyW','ArrowUp','KeyS','ArrowDown'), side=axis('KeyD','ArrowRight','KeyA','ArrowLeft');
+  const speed=5.7*dt/(Math.hypot(forward,side)||1);
+  player.x=T.MathUtils.clamp(player.x+(-Math.sin(yaw)*forward+Math.cos(yaw)*side)*speed,-8.1,8.1);
+  player.z=T.MathUtils.clamp(player.z+(-Math.cos(yaw)*forward-Math.sin(yaw)*side)*speed,-11.1,11.1);
+  camera.position.set(player.x,1.63,player.z);camera.rotation.set(pitch,yaw,0);
+  const alive=bots.filter(b=>b.model.visible);
+  const retriever=!owner&&!inFlight?alive.reduce((best,b)=>!best||distance(b.model.position,ball.position)<distance(best.model.position,ball.position)?b:best,null):null;
+  for(const b of alive){
+   const p=b.model.position, moving=b===retriever;
+   let x=moving?ball.position.x:b.x+Math.sin(clock*1.3+b.x),z=moving?ball.position.z:b.z;
+   if(inFlight&&thrower===player){
+    const eta=(p.z-ball.position.z)/(velocity.z||.001);
+    const incomingX=ball.position.x+velocity.x*eta;
+    if(eta>0&&eta<.8&&Math.abs(incomingX-p.x)<1.15)x=p.x+(p.x<incomingX?-2:2);
+   }
+   const dx=x-p.x,dz=z-p.z,dist=Math.hypot(dx,dz);
+   if(dist>.08){
+    const travel=Math.min(dist,(moving?3.7:3)*dt)/dist;
+    const nx=T.MathUtils.clamp(p.x+dx*travel,-8.1,8.1),nz=T.MathUtils.clamp(p.z+dz*travel,-11.1,11.1);
+    if(Math.hypot(nx-player.x,nz-player.z)>.88&&alive.every(other=>other===b||Math.hypot(nx-other.model.position.x,nz-other.model.position.z)>.8))p.set(nx,0,nz);
+   }
+   b.model.rotation.y=Math.atan2(player.x-p.x,player.z-p.z);
+   for(const {arm,leg,side} of b.limbs){leg.rotation.x=dist>.08?Math.sin(clock*11)*side*.48:0;arm.rotation.x=-leg.rotation.x}
+  }
+  for(const b of alive){
+   const p=b.model.position,dx=player.x-p.x,dz=player.z-p.z,dist=Math.hypot(dx,dz);
+   if(dist<.88){player.x=T.MathUtils.clamp(p.x+(dist?dx/dist:1)*.88,-8.1,8.1);player.z=T.MathUtils.clamp(p.z+(dist?dz/dist:0)*.88,-11.1,11.1)}
+  }
+  camera.position.set(player.x,1.63,player.z);
+  updateBall(dt,alive);
+  if(charge!==null)power.value=Math.min(1,(clock-charge)/1.15);
+  updateHud();
+  if(!lives||bots.every(b=>!b.model.visible))finish(lives>0);
+ }
+ let last=performance.now(),acc=0;
+ camera.position.set(0,3,9);camera.lookAt(0,1,-5);
+ renderer.setAnimationLoop(now=>{
+  const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;
+  if(active){acc+=dt;while(acc>=1/120&&active){step(1/120);acc-=1/120}}
+  else acc=0;
+  renderer.render(scene,camera);
+ });
 }
 </script>
 </html>
