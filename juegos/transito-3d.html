@@ -1790,7 +1790,7 @@
                 camera.lookAt(busPos);
             } else if (cameraMode === 2) {
                 // Windshield Cockpit Camera
-                const offset = new THREE.Vector3(Math.sin(busHeading) * 2.2, 2.1, Math.cos(busHeading) * 2.2);
+                const offset = new THREE.Vector3(Math.sin(busHeading) * 4.35, 2.1, Math.cos(busHeading) * 4.35);
                 camera.position.copy(busPos.clone().add(offset));
                 const lookTarget = busPos.clone().add(new THREE.Vector3(Math.sin(busHeading) * 20, 2.0, Math.cos(busHeading) * 20));
                 camera.lookAt(lookTarget);
