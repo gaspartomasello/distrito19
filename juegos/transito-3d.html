@@ -594,6 +594,13 @@
         }
 
         // --- CITY ENVIRONMENT & ROADS ---
+        const crossings = [
+            {x:-40,z:0,vertical:true}, {x:60,z:0,vertical:true},
+            {x:10,z:50,vertical:true}, {x:-60,z:50,vertical:true},
+            {x:0,z:-40,vertical:false}, {x:50,z:10,vertical:false},
+            {x:-50,z:-10,vertical:false}, {x:0,z:60,vertical:false}
+        ];
+
         function buildEnvironment() {
             // Main Grass Ground
             const groundMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.9 });
@@ -622,18 +629,42 @@
                 vRoad.receiveShadow = true;
                 scene.add(vRoad);
 
-                // Yellow Center Markings
-                const lineMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
-                const hLine = new THREE.Mesh(new THREE.PlaneGeometry(350, 0.35), lineMat);
-                hLine.rotation.x = -Math.PI / 2;
-                hLine.position.set(0, 0.06, i * step);
-                scene.add(hLine);
-
-                const vLine = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 350), lineMat);
-                vLine.rotation.x = -Math.PI / 2;
-                vLine.position.set(i * step, 0.06, 0);
-                scene.add(vLine);
             }
+            const yellow = new THREE.MeshBasicMaterial({color:0xfacc15});
+            const white = new THREE.MeshBasicMaterial({color:0xf8fafc});
+            function marking(x,z,w,d,material) {
+                const mesh = new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
+                mesh.rotation.x = -Math.PI/2;
+                mesh.position.set(x,0.075,z);
+                scene.add(mesh);
+            }
+            const roadEdges = [-175,-108,-92,-58,-42,-8,8,42,58,92,108,175];
+            for (let road=-100; road<=100; road+=50) {
+                for (let i=0; i<roadEdges.length; i+=2) {
+                    const start=roadEdges[i], end=roadEdges[i+1];
+                    for (const offset of [-0.34,0.34]) {
+                        marking((start+end)/2,road+offset,end-start,0.22,yellow);
+                        marking(road+offset,(start+end)/2,0.22,end-start,yellow);
+                    }
+                }
+            }
+            for (const {x,z,vertical} of crossings) {
+                for (let offset=-7; offset<=7; offset+=2) {
+                    marking(x+(vertical?0:offset),z+(vertical?offset:0),vertical?3:1,vertical?1:3,white);
+                }
+            }
+            const windowCanvas = document.createElement('canvas');
+            windowCanvas.width = windowCanvas.height = 64;
+            const pane = windowCanvas.getContext('2d');
+            pane.fillStyle = '#a8b6c5';
+            pane.fillRect(0,0,64,64);
+            pane.fillStyle = '#253d55';
+            pane.fillRect(12,12,40,40);
+            pane.fillStyle = '#85b7ce';
+            pane.fillRect(15,15,15,32);
+            pane.fillRect(34,15,15,32);
+            const facade = new THREE.CanvasTexture(windowCanvas);
+            facade.wrapS = facade.wrapT = THREE.RepeatWrapping;
 
             // City Blocks & Buildings with SAFE Clearances
             const buildingColors = [0x94a3b8, 0x64748b, 0x0284c7, 0x0d9488, 0xd97706, 0xe11d48, 0x4f46e5];
@@ -667,7 +698,14 @@
 
                         const color = buildingColors[Math.floor(Math.random() * buildingColors.length)];
                         const bMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
-                        const bMesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bMat);
+                        const wallMaterials = [d,w].map(span => {
+                            const map = facade.clone();
+                            map.repeat.set(Math.max(2,Math.round(span/3)),Math.round(h/3));
+                            map.needsUpdate = true;
+                            return new THREE.MeshStandardMaterial({map,roughness:0.65});
+                        });
+                        const [side,front] = wallMaterials;
+                        const bMesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), [side,side,bMat,bMat,front,front]);
                         bMesh.position.set(cx + ox, h / 2 + 0.2, cz + oz);
                         bMesh.castShadow = true;
                         bMesh.receiveShadow = true;
@@ -925,11 +963,28 @@
                     }
                 });
 
+                const {x,z} = car.mesh.position;
+                const hx = car.dirX ? 2.1 : 1.2;
+                const hz = car.dirX ? 1.2 : 2.1;
+                function blocked(ahead) {
+                    const nx=x+car.dirX*ahead, nz=z+car.dirZ*ahead;
+                    return overlapsBus(busPos.x,busPos.z,busHeading,nx,nz,hx,hz) ||
+                        npcCarsList.some(other => other!==car &&
+                            Math.abs(nx-other.mesh.position.x)<hx+(other.dirX?2.1:1.2) &&
+                            Math.abs(nz-other.mesh.position.z)<hz+(other.dirX?1.2:2.1)) ||
+                        pedestriansList.some(({mesh}) => Math.abs(nx-mesh.position.x)<hx+0.4 &&
+                            Math.abs(nz-mesh.position.z)<hz+0.4);
+                }
+                for (let ahead=1; ahead<=7; ahead++) shouldStop ||= blocked(ahead);
                 const desiredSpeed = shouldStop ? 0 : car.targetSpeed;
                 car.currentSpeed += (desiredSpeed - car.currentSpeed) * dt * 4.0;
 
-                car.mesh.position.x += car.dirX * car.currentSpeed * dt;
-                car.mesh.position.z += car.dirZ * car.currentSpeed * dt;
+                const travel = car.currentSpeed * dt;
+                if (blocked(travel)) car.currentSpeed = 0;
+                else {
+                    car.mesh.position.x += car.dirX * travel;
+                    car.mesh.position.z += car.dirZ * travel;
+                }
 
                 // Loop around map boundaries
                 if (car.mesh.position.x > 175) car.mesh.position.x = -175;
@@ -952,16 +1007,11 @@
         // --- WALKING PEDESTRIANS ---
         function setupWalkingPedestrians() {
             const colors = [0x3b82f6, 0xef4444, 0x10b981, 0xec4899, 0xf59e0b, 0x8b5cf6, 0x06b6d4];
-            const paths = [
-                { start: new THREE.Vector3(-22, 0, -22), end: new THREE.Vector3(-22, 0, -78) },
-                { start: new THREE.Vector3(22, 0, -22), end: new THREE.Vector3(78, 0, -22) },
-                { start: new THREE.Vector3(-78, 0, 22), end: new THREE.Vector3(-22, 0, 22) },
-                { start: new THREE.Vector3(22, 0, 78), end: new THREE.Vector3(22, 0, 22) },
-                { start: new THREE.Vector3(78, 0, 22), end: new THREE.Vector3(78, 0, 78) },
-                { start: new THREE.Vector3(-22, 0, 78), end: new THREE.Vector3(-78, 0, 78) },
-                { start: new THREE.Vector3(-78, 0, -78), end: new THREE.Vector3(-22, 0, -78) },
-                { start: new THREE.Vector3(78, 0, -78), end: new THREE.Vector3(22, 0, -78) }
-            ];
+            const paths = crossings.map(({x,z,vertical}) => {
+                const dx = vertical ? 0 : 9.5;
+                const dz = vertical ? 9.5 : 0;
+                return {start:new THREE.Vector3(x-dx,0,z-dz),end:new THREE.Vector3(x+dx,0,z+dz)};
+            });
 
             paths.forEach((path, idx) => {
                 const pGroup = new THREE.Group();
@@ -1006,9 +1056,9 @@
                     mesh: pGroup,
                     start: path.start,
                     end: path.end,
-                    progress: Math.random(),
+                    progress: 0,
                     direction: 1,
-                    speed: 0.04 + Math.random() * 0.02,
+                    speed: 0.075 + Math.random() * 0.025,
                     walkCycle: Math.random() * Math.PI * 2,
                     legL, legR, armL, armR
                 });
@@ -1017,7 +1067,14 @@
 
         function updateWalkingPedestrians(dt) {
             pedestriansList.forEach(p => {
-                p.progress += p.speed * p.direction * dt;
+                const next = Math.max(0,Math.min(1,p.progress+p.speed*p.direction*dt));
+                const x = p.start.x+(p.end.x-p.start.x)*next;
+                const z = p.start.z+(p.end.z-p.start.z)*next;
+                if (npcCarsList.some(({mesh,dirX}) =>
+                    Math.abs(x-mesh.position.x)<(dirX?2.5:1.6) &&
+                    Math.abs(z-mesh.position.z)<(dirX?1.6:2.5)) ||
+                    overlapsBus(busGroup.position.x,busGroup.position.z,busHeading,x,z,0.4,0.4)) return;
+                p.progress = next;
 
                 if (p.progress >= 1.0) {
                     p.progress = 1.0;
@@ -1438,6 +1495,21 @@
         // 4. FAIL-SAFE PHYSICS ENGINE & GAME LOOP
         // ==========================================
         // Test the bus footprint against a building on all four separating axes.
+        function overlapsBus(x,z,heading,cx,cz,hx,hz) {
+            const c = Math.cos(heading), s = Math.sin(heading);
+            const ac = Math.abs(c), as = Math.abs(s);
+            const dx = x-cx, dz = z-cz;
+            return Math.abs(dx) < hx+1.35*ac+4.25*as &&
+                   Math.abs(dz) < hz+1.35*as+4.25*ac &&
+                   Math.abs(dx*c-dz*s) < 1.35+hx*ac+hz*as &&
+                   Math.abs(dx*s+dz*c) < 4.25+hx*as+hz*ac;
+        }
+
+        function hitsCar(x,z,heading) {
+            return npcCarsList.some(({mesh,dirX}) =>
+                overlapsBus(x,z,heading,mesh.position.x,mesh.position.z,dirX?2.1:1.2,dirX?1.2:2.1));
+        }
+
         function hitsBuilding(x, z, heading) {
             const c = Math.cos(heading), s = Math.sin(heading);
             const ac = Math.abs(c), as = Math.abs(s);
@@ -1491,11 +1563,11 @@
 
             if (inputState.left) {
                 steerAngle = 0.45;
-                const dir = busSpeed < 0 ? 1 : -1;
+                const dir = busSpeed < 0 ? -1 : 1;
                 busHeading += steerSpeed * dt * turnFactor * dir;
             } else if (inputState.right) {
                 steerAngle = -0.45;
-                const dir = busSpeed < 0 ? 1 : -1;
+                const dir = busSpeed < 0 ? -1 : 1;
                 busHeading -= steerSpeed * dt * turnFactor * dir;
             }
 
@@ -1506,7 +1578,7 @@
             rearWheelMeshes.forEach(m => m.rotation.x += wheelSpin);
 
             // Advance through small steps and keep the last valid position.
-            if (hitsBuilding(busGroup.position.x, busGroup.position.z, busHeading)) {
+            if (hitsBuilding(busGroup.position.x, busGroup.position.z, busHeading) || hitsCar(busGroup.position.x, busGroup.position.z, busHeading)) {
                 busHeading = previousHeading;
             }
             const travel = busSpeed * dt;
@@ -1517,10 +1589,11 @@
             for (let step = 0; step < steps; step++) {
                 const x = busGroup.position.x + dx;
                 const z = busGroup.position.z + dz;
-                if (hitsBuilding(x, z, busHeading)) {
+                const hitCar = hitsCar(x,z,busHeading);
+                if (hitCar || hitsBuilding(x, z, busHeading)) {
                     if (Math.abs(busSpeed) > 1 && collisionCooldown === 0) {
                         collisionCooldown = 2.5;
-                        triggerFine("¡MULTA: COLISIÓN CON PARED! (-$20)", 20);
+                        triggerFine(hitCar ? "¡MULTA: CHOQUE CON UN AUTO! (-$20)" : "¡MULTA: COLISIÓN CON PARED! (-$20)", 20);
                     }
                     busSpeed = 0;
                     break;
