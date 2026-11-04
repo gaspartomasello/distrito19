@@ -532,14 +532,14 @@
 
         // Stops & Terminal Configuration
         const busStops = [
-            { pos: new THREE.Vector3(-65, 0, -45), name: "Parada 1: Centro Comercial", mesh: null, passengersCount: 4, passengerMeshes: [] },
-            { pos: new THREE.Vector3(65, 0, -85), name: "Parada 2: Parque Central", mesh: null, passengersCount: 3, passengerMeshes: [] },
-            { pos: new THREE.Vector3(75, 0, 65), name: "Parada 3: Zona Residencial", mesh: null, passengersCount: 4, passengerMeshes: [] },
-            { pos: new THREE.Vector3(-75, 0, 75), name: "Parada 4: Estación Norte", mesh: null, passengersCount: 3, passengerMeshes: [] }
+            { pos: new THREE.Vector3(-65, 0, -53.8), name: "Parada 1: Centro Comercial", mesh: null, passengersCount: 4, passengerMeshes: [] },
+            { pos: new THREE.Vector3(53.8, 0, -85), name: "Parada 2: Parque Central", mesh: null, passengersCount: 3, passengerMeshes: [] },
+            { pos: new THREE.Vector3(75, 0, 53.8), name: "Parada 3: Zona Residencial", mesh: null, passengersCount: 4, passengerMeshes: [] },
+            { pos: new THREE.Vector3(-53.8, 0, 75), name: "Parada 4: Estación Norte", mesh: null, passengersCount: 3, passengerMeshes: [] }
         ];
 
         let activeStopIndex = 0;
-        const terminalStop = { pos: new THREE.Vector3(0, 0, 0), name: "Terminal Principal (Descenso)", mesh: null };
+        const terminalStop = { pos: new THREE.Vector3(-24, 0, -3.8), name: "Terminal Principal (Descenso)", mesh: null };
 
         let lastTime = performance.now();
 
@@ -1103,7 +1103,7 @@
             busGroup = new THREE.Group();
 
             // Main Body (Yellow Bus) - Facing +Z
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.3, metalness: 0.1 });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf27816, roughness: 0.3, metalness: 0.1 });
             const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.6, 8.0), bodyMat);
             body.position.y = 1.6;
             body.castShadow = true;
@@ -1222,7 +1222,7 @@
             arrowShape.closePath();
 
             const arrowGeo = new THREE.ShapeGeometry(arrowShape);
-            arrowGeo.rotateX(-Math.PI / 2); // Rotate flat onto asphalt plane
+            arrowGeo.rotateX(Math.PI / 2); // The arrow tip points along local +Z
 
             const arrowMat = new THREE.MeshBasicMaterial({ 
                 color: 0xfacc15, 
@@ -1590,6 +1590,10 @@
                 const x = busGroup.position.x + dx;
                 const z = busGroup.position.z + dz;
                 const hitCar = hitsCar(x,z,busHeading);
+                if (Math.abs(x) > 170 || Math.abs(z) > 170) {
+                    busSpeed = 0;
+                    break;
+                }
                 if (hitCar || hitsBuilding(x, z, busHeading)) {
                     if (Math.abs(busSpeed) > 1 && collisionCooldown === 0) {
                         collisionCooldown = 2.5;
@@ -1630,12 +1634,25 @@
                 ? terminalStop
                 : busStops[activeStopIndex];
 
-            // Position 3D Navigational Arrow ON THE GROUND 4.5 meters in front of the bus
-            const forwardOffset = new THREE.Vector3(Math.sin(busHeading) * 4.5, 0, Math.cos(busHeading) * 4.5);
-            waypointArrow.position.set(busPos.x + forwardOffset.x, 0.15, busPos.z + forwardOffset.z);
-            
-            // Point the ground arrow towards the target location on the road
-            waypointArrow.lookAt(target.pos.x, 0.15, target.pos.z);
+            const road = value => Math.max(-100, Math.min(100, Math.round(value / 50) * 50));
+            const roadX = road(busPos.x), roadZ = road(busPos.z);
+            const targetX = road(target.pos.x), targetZ = road(target.pos.z);
+            const onHorizontal = Math.abs(busPos.z-roadZ) <= Math.abs(busPos.x-roadX);
+            const targetHorizontal = Math.abs(target.pos.z-targetZ) <= Math.abs(target.pos.x-targetX);
+            let guideX = target.pos.x, guideZ = target.pos.z;
+            if (onHorizontal && !(targetHorizontal && roadZ === targetZ)) {
+                guideX = targetX;
+                guideZ = Math.abs(busPos.x-targetX) > 5 ? roadZ : target.pos.z;
+            } else if (!onHorizontal && !(!targetHorizontal && roadX === targetX)) {
+                guideZ = targetZ;
+                guideX = Math.abs(busPos.z-targetZ) > 5 ? roadX : target.pos.x;
+            }
+            waypointArrow.position.set(
+                busPos.x + Math.sin(busHeading)*6, 5.8,
+                busPos.z + Math.cos(busHeading)*6
+            );
+            const guideAngle = Math.atan2(guideX-busPos.x, guideZ-busPos.z);
+            waypointArrow.rotation.y = guideAngle;
 
             // Change Arrow Color dynamically (Yellow for Bus Stop, Green for Drop-off Terminal)
             if (target === terminalStop) {
