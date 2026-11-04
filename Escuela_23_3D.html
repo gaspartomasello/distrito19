@@ -362,7 +362,17 @@ $('placesBtn').onclick=()=>openModal('placesModal');$('planBtn').onclick=()=>ope
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeModal);document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)closeModal()});
 $('planImage').src=ASSETS.plan;for(let r of ASSETS.refs){let f=document.createElement('figure');let im=new Image();im.src=r.src;im.alt=r.label;let cap=document.createElement('figcaption');cap.textContent=r.label;f.append(im,cap);$('refs').append(f)}
 $('qualityBtn').onclick=()=>{renderer.shadowMap.enabled=!renderer.shadowMap.enabled;$('qualityBtn').textContent='Sombras: '+(renderer.shadowMap.enabled?'activadas':'desactivadas')};
-$('start').disabled=false;$('start').textContent='Entrar a la escuela →';$('loading').textContent='Listo para recorrer';$('start').onclick=()=>{active=true;$('welcome').classList.add('hidden');go(0);if(!matchMedia('(pointer:coarse)').matches)captureMouse();};
+$('start').disabled=false;$('start').textContent='Entrar a la escuela →';$('loading').textContent='Listo para recorrer';$('start').onclick=()=>{
+  const root = document.documentElement;
+  const request = root.requestFullscreen || root.webkitRequestFullscreen;
+  if (request && !document.fullscreenElement && !document.webkitFullscreenElement) {
+    try {
+      Promise.resolve(request.call(root)).catch(() => {});
+    } catch {
+      // The tour can still start in the browser viewport.
+    }
+  }
+  active=true;$('welcome').classList.add('hidden');go(0);if(!matchMedia('(pointer:coarse)').matches)captureMouse();};
 window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();keys[e.code]=true;if(e.repeat)return;if(e.code==='Escape'){closeModal();return}if(!active||modal)return;if(e.code==='KeyM')openModal('planModal');if(e.code==='KeyV')toggleAerial();if(e.code==='KeyR')go(0);if(e.code==='KeyE')interact();if(e.code==='Space')jump();});window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{keys={};joy.x=joy.y=0;drag=null});
 function captureMouse(){if(!active||aerial||modal||document.pointerLockElement===canvas)return;try{const result=canvas.requestPointerLock?.();result?.catch?.(()=>toast('No se pudo capturar el mouse. Abrí el HTML en una pestaña del navegador.'));}catch{toast('No se pudo capturar el mouse. Abrí el HTML en una pestaña del navegador.');}}
 canvas.addEventListener('click',e=>{if(!matchMedia('(pointer:coarse)').matches)captureMouse();});
