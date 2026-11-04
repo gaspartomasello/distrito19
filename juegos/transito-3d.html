@@ -1653,6 +1653,13 @@
             );
             const guideAngle = Math.atan2(guideX-busPos.x, guideZ-busPos.z);
             waypointArrow.rotation.y = guideAngle;
+            // Tilt toward the chase camera while preserving the arrow's map heading.
+            const tilt = cameraMode === 0 ? Math.PI / 5 : 0;
+            const relativeHeading = busHeading - guideAngle;
+            waypointArrow.children.forEach(mesh => {
+                mesh.rotation.set(-tilt * Math.cos(relativeHeading), 0,
+                    tilt * Math.sin(relativeHeading));
+            });
 
             // Change Arrow Color dynamically (Yellow for Bus Stop, Green for Drop-off Terminal)
             if (target === terminalStop) {
