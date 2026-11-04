@@ -397,6 +397,11 @@ function openGame(src,title){
  };
  gameFrame.src=src;exitGame.focus();
 }
+const sanMartinButton=document.createElement('button');
+sanMartinButton.type='button';sanMartinButton.textContent='⚑ San Martín · Jugar';
+sanMartinButton.style.cssText='position:fixed;left:12px;bottom:12px;z-index:20;padding:.65rem;background:#182843;color:white;border:1px solid #b6cfff;border-radius:6px';
+sanMartinButton.hidden=true;document.body.append(sanMartinButton);
+sanMartinButton.onclick=()=>openGame('https://gaspartomasello.github.io/SAN-MARTIN-JUEGO/','San Martín');
 function interact(){if(nearDodgeball()){openGame('./juegos/quemado-3d.html','Quemado 3D');return}if(nearBusPortal()){openGame('./juegos/transito-3d.html','Reglas de tránsito en la ciudad 3D');return}if(nearest){const opening=Math.abs(nearest.target)<.1;nearest.target=opening?-PI*.51:0;if(nearest.paired)for(const d of doors)if(d.paired)d.target=opening?(d.base>0?-PI*.51:PI*.51):0;toast(nearest.target?'Puerta abierta':'Puerta cerrada')}else toast('Acercate a una puerta de aula');}
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',2600)}
 function updateMode(){$('aerialBtn').textContent=aerial?'A pie':'Vista aérea';$('aerialBtn').classList.toggle('active',aerial);}
@@ -436,6 +441,7 @@ let last=performance.now(),frame=0;function loop(now){requestAnimationFrame(loop
  if(active&&!modal&&!aerial){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)+joy.y,s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x;let l=Math.hypot(f,s);if(l>1){f/=l;s/=l}let v=(keys.ShiftLeft||keys.ShiftRight?4.5:2.7)*dt;move((-Math.sin(yaw)*f-Math.cos(yaw)*s)*v,(-Math.cos(yaw)*f+Math.sin(yaw)*s)*v);verticalStep(dt);}
  if(!active){camera.position.set(18,4,7);camera.lookAt(1,2.4,30)}else if(aerial){const target=new T.Vector3(12,0,23);camera.position.set(target.x+Math.sin(orbit.a)*Math.cos(orbit.e)*orbit.r,Math.sin(orbit.e)*orbit.r,target.z+Math.cos(orbit.a)*Math.cos(orbit.e)*orbit.r);camera.lookAt(target)}else{const eye=surveyed(pos.x,pos.y+1.65,pos.z),ahead=surveyed(pos.x-Math.sin(yaw)*Math.cos(pitch),pos.y+1.65+Math.sin(pitch),pos.z-Math.cos(yaw)*Math.cos(pitch));camera.position.set(-eye.x,eye.y,eye.z);camera.lookAt(-ahead.x,ahead.y,ahead.z)}
  nearest=null;let nd=2.3;for(let d of doors){d.angle+=(d.target-d.angle)*Math.min(1,dt*8);d.pivot.rotation.y=d.base+d.angle;let dist=Math.hypot(pos.x-d.x,pos.z-d.z);if(Math.abs(pos.y-d.y)<.6&&dist<nd){nd=dist;nearest=d}}
+ sanMartinButton.hidden=!active||modal||aerial;
  if(frame++%12===0){$('zone').textContent=zoneName();$('hint').textContent=aerial?'Arrastrá para girar · Rueda / pellizco para acercarte':nearDodgeball()?'E · Jugar al Quemado 3D':nearBusPortal()?'E · Jugar al tránsito 3D':nearest?'E · Abrir / cerrar '+nearest.label:matchMedia('(pointer:coarse)').matches?'Palanca para caminar · Deslizá para mirar':(document.pointerLockElement===canvas?'WASD · Espacio salta · Mouse mira · Esc libera':'Clic para mirar · Espacio salta · WASD para caminar');drawMap();}
  const fp=flagGeo.attributes.position;for(let i=0;i<fp.count;i++)fp.setZ(i,Math.sin(time*2.3+fp.getX(i)*4)*.14*(fp.getX(i)+1)/2);fp.needsUpdate=true;renderer.render(scene,camera);
 }
