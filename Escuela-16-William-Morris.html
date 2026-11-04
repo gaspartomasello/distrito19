@@ -58,7 +58,17 @@ for(let z of [1.5,3.5])for(let x of [-20,-17,-14]){table(x,z,2,.75);box(x,Y+1.1,
 for(let x of [-3.35,3.35])wall(x,9,.7,.8);for(let x of [-3.3,0,3.3])portal(x,17,2.8);for(let x of [-5,5])wall(x,13,.22,8);
 const bustStart=scene.children.length,bustCollStart=coll.length;for(let [cy,h,w,d]of [[.06,.12,1.1,.9],[.18,.12,.94,.8],[.95,1.42,.70,.60],[1.74,.16,1.0,.82]])box(0,Y+cy,14,w,h,d,'#b7a581',h>1);label('WILLIAM C. MORRIS',0,Y+1.33,13.688,.68);label('1864 — 1932',0,Y+1.1,13.685,.55);function ell(x,y,z,a,b,c,color){let m=new THREE.Mesh(new THREE.SphereGeometry(1,20,16),mat(color));m.position.set(x,y,z);m.scale.set(a,b,c);scene.add(m);m.castShadow=true;return m;}box(0,Y+1.99,14,.64,.48,.30,'#514f40');ell(0,Y+2.18,14,.34,.19,.17,'#514f40');ell(0,Y+2.57,14,.18,.29,.18,'#514f40');ell(0,Y+2.53,13.82,.04,.065,.055,'#514f40');box(0,Y+2.25,14,.16,.3,.18,'#514f40');
 for(const m of scene.children.slice(bustStart))m.userData.rigidAnchor=[0,14];for(const b of coll.slice(bustCollStart))b.rigidAnchor=[0,14];
-let bell=new THREE.Mesh(new THREE.CylinderGeometry(.13,.25,.32,24,1,true),mat('#9b8755'));bell.position.set(2,Y+2.9,16.75);scene.add(bell);box(2,Y+2.4,16.75,.014,.7,.014,'#645a40');table(-4,12,1.3);table(4,11,1.3);plant(2.5,16.4);plant(-2.5,16.4);poster(-4.86,13,Math.PI/2);poster(4.86,13,Math.PI/2);
+let bell=new THREE.Mesh(new THREE.CylinderGeometry(.13,.25,.32,24,1,true),mat('#9b8755'));bell.position.set(2,Y+2.9,16.75);scene.add(bell);box(2,Y+2.4,16.75,.014,.7,.014,'#645a40');table(-4,12,1.3);table(4,11,1.3);
+{
+ const shape=new THREE.Shape();
+ shape.moveTo(-.48,.02);shape.quadraticCurveTo(-.24,.27,0,.33);
+ shape.quadraticCurveTo(.24,.27,.48,.02);shape.quadraticCurveTo(0,-.02,-.48,.02);
+ const hat=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.23,bevelEnabled:false,curveSegments:10}),mat('#24212a'));
+ hat.position.set(4,Y+.80,10.88);scene.add(hat);
+ box(4,Y+.97,11.12,.045,.17,.025,'#d7aa4e');
+ label('SAN MARTÍN · E',4,Y+1.4,11,1.15);
+}
+plant(2.5,16.4);plant(-2.5,16.4);poster(-4.86,13,Math.PI/2);poster(4.86,13,Math.PI/2);
 // Aulas mobiliario
 for(let [cx,cz]of [[-11,13],[17,13],[19,3]])for(let i=0;i<3;i++)for(let j=0;j<2;j++){table(cx-2+i*1.7,cz-1.7+j*2);box(cx-2+i*1.7,Y+.43,cz-1.1+j*2,.45,.09,.46,'#578ca0');}
 box(7.65,Y+.85,13,.5,1.7,5,'#dedcd0');box(5.35,Y+.85,13,.5,1.7,5,'#bfc3bf');floor(6.5,13,2.7,7.7,Y+.005,'#b88271');
@@ -191,10 +201,11 @@ function escapeHorror(event){if(horrorOpen&&event.code==='Escape'){event.prevent
 addEventListener('keydown',escapeHorror,true);
 horrorFrame.addEventListener('load',()=>{if(horrorOpen)horrorFrame.contentDocument?.addEventListener('keydown',escapeHorror,true)});
 const sanMartinButton=document.createElement('button');
-sanMartinButton.type='button';sanMartinButton.textContent='⚑ Jugar a San Martín [G]';
+sanMartinButton.type='button';sanMartinButton.textContent='E · Jugar a San Martín';
 sanMartinButton.style.cssText='position:fixed;left:12px;bottom:clamp(7rem,23vh,12rem);z-index:50;padding:.65rem;background:#182843;color:white;border:1px solid #b6cfff;border-radius:6px';
 sanMartinButton.hidden=true;document.body.append(sanMartinButton);
-addEventListener('keydown',event=>{if(event.code==='KeyG'&&!event.repeat&&!sanMartinButton.hidden)sanMartinButton.click()});
+function nearSanMartin(){return started&&!overview&&!horrorOpen&&Math.abs(player.y-Y-1.65)<.65&&Math.hypot(player.x-mapX(4),player.z-mapZ(11))<2.15}
+addEventListener('keydown',event=>{if(event.code==='KeyE'&&!event.repeat&&nearSanMartin())sanMartinButton.click()});
 sanMartinButton.onclick=()=>openHorror('https://gaspartomasello.github.io/SAN-MARTIN-JUEGO/','San Martín');
 function openHorror(src,title){
  horrorOpen=true;clearMovement();
@@ -208,6 +219,6 @@ function checkElevator(){
  if(!started||overview||horrorOpen||!elevatorArmed||distance>1.65||Math.abs(player.y-1.65-Y)>.55)return;
  elevatorArmed=false;openHorror('./juegos/elpasillo.html','La dimensión desconocida');
 }
-let prev=performance.now();function animate(t){requestAnimationFrame(animate);let dt=Math.min((t-prev)/1000,.035);prev=t;sanMartinButton.hidden=!started||overview||horrorOpen;if(horrorOpen)return;if(started&&!overview){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),norm=Math.hypot(f,s)||1,v=(keys.ShiftLeft?5:2.7)*dt/norm;let dx=(-Math.sin(yaw)*f+Math.cos(yaw)*s)*v,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*s)*v;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz;vy-=12*dt;player.y+=vy*dt;let g=ground(player.x,player.z)+1.65;if(player.y<g){player.y=g;vy=0;}}
+let prev=performance.now();function animate(t){requestAnimationFrame(animate);let dt=Math.min((t-prev)/1000,.035);prev=t;sanMartinButton.hidden=!nearSanMartin();if(horrorOpen)return;if(started&&!overview){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),norm=Math.hypot(f,s)||1,v=(keys.ShiftLeft?5:2.7)*dt/norm;let dx=(-Math.sin(yaw)*f+Math.cos(yaw)*s)*v,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*s)*v;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz;vy-=12*dt;player.y+=vy*dt;let g=ground(player.x,player.z)+1.65;if(player.y<g){player.y=g;vy=0;}}
 if(overview){camera.position.set(-10,48,5);camera.lookAt(-10,0,12);}else{camera.position.set(player.x,player.y,player.z);camera.rotation.set(pitch,yaw,0,'YXZ');}const ux=unmapX(player.x),uz=unmapZ(player.z);document.getElementById('zone').textContent=uz<0?'Fachada':ux>38&&uz<22?'Patio lateral':ux>24&&uz>22?'Sanitarios / acceso S3':ux>24?'SUM':uz>17?'Patio descubierto':Math.abs(ux)<5&&uz>9?'Hall principal':ux< -12&&uz<6?'Laboratorio':ux< -20?'Ascensor':uz<6&&Math.abs(ux)<1.7?'Vestíbulo':'Pasillo';checkElevator();map();renderer.render(scene,camera);}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});window.tour={go,toggle,player,scene,coll,ground,blocked,renderer,mapX,mapZ,unmapX,unmapZ};
 </script></html>
