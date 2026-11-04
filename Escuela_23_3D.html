@@ -398,9 +398,10 @@ function openGame(src,title){
  gameFrame.src=src;exitGame.focus();
 }
 const sanMartinButton=document.createElement('button');
-sanMartinButton.type='button';sanMartinButton.textContent='⚑ San Martín · Jugar';
-sanMartinButton.style.cssText='position:fixed;left:12px;bottom:12px;z-index:20;padding:.65rem;background:#182843;color:white;border:1px solid #b6cfff;border-radius:6px';
+sanMartinButton.type='button';sanMartinButton.textContent='⚑ Jugar a San Martín [G]';
+sanMartinButton.style.cssText='position:fixed;left:12px;bottom:clamp(7rem,23vh,12rem);z-index:50;padding:.65rem;background:#182843;color:white;border:1px solid #b6cfff;border-radius:6px';
 sanMartinButton.hidden=true;document.body.append(sanMartinButton);
+addEventListener('keydown',event=>{if(event.code==='KeyG'&&!event.repeat&&!sanMartinButton.hidden)sanMartinButton.click()});
 sanMartinButton.onclick=()=>openGame('https://gaspartomasello.github.io/SAN-MARTIN-JUEGO/','San Martín');
 function interact(){if(nearDodgeball()){openGame('./juegos/quemado-3d.html','Quemado 3D');return}if(nearBusPortal()){openGame('./juegos/transito-3d.html','Reglas de tránsito en la ciudad 3D');return}if(nearest){const opening=Math.abs(nearest.target)<.1;nearest.target=opening?-PI*.51:0;if(nearest.paired)for(const d of doors)if(d.paired)d.target=opening?(d.base>0?-PI*.51:PI*.51):0;toast(nearest.target?'Puerta abierta':'Puerta cerrada')}else toast('Acercate a una puerta de aula');}
 function toast(t){$('toast').textContent=t;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',2600)}
