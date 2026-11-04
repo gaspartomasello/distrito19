@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperMente 6to Grado - Desafío Escolar</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #db2777 100%);
+            min-height: 100vh;
+        }
+        .font-game {
+            font-family: 'Fredoka', cursive;
+        }
+        .card-bounce {
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .card-bounce:hover {
+            transform: translateY(-8px) scale(1.03);
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop {
+            animation: pop 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-100 antialiased selection:bg-amber-400 selection:text-slate-900">
+
+    <!-- Encabezado Principal -->
+    <header class="w-full bg-slate-900/80 backdrop-blur-md border-b border-white/10 py-3 px-6 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="app.showScreen('welcome-screen')">
+                <div class="bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 p-2.5 rounded-2xl shadow-lg font-bold text-2xl font-game leading-none">
+                    🎒⭐
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-bold font-game text-amber-300 tracking-wide drop-shadow">
+                        SuperMente 6°
+                    </h1>
+                    <span class="text-[11px] uppercase font-bold tracking-widest text-slate-300 -mt-1 block">Juego para 6to de Primaria</span>
+                </div>
+            </div>
+            
+            <!-- Marcadores y Estado -->
+            <div class="flex items-center gap-3">
+                <div class="bg-slate-800/90 text-white px-4 py-2 rounded-2xl flex items-center gap-2 font-semibold border border-amber-400/30 shadow-md">
+                    <i class="fas fa-star text-amber-400 text-lg"></i>
+                    <span class="text-sm">Puntos: <strong id="global-score" class="text-amber-300 text-lg font-bold">0</strong></span>
+                </div>
+                <button id="sound-btn" onclick="app.toggleSound()" class="bg-slate-800/90 text-white p-2.5 rounded-2xl hover:bg-slate-700 transition border border-white/10 shadow-md" title="Activar/Desactivar Sonido">
+                    <i id="sound-icon" class="fas fa-volume-up text-base"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-grow flex items-center justify-center p-4 sm:p-6">
+        <div class="w-full max-w-4xl bg-slate-900/90 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden relative">
+
+            <!-- 1. PANTALLA DE BIENVENIDA Y SELECCIÓN -->
+            <div id="welcome-screen" class="p-6 sm:p-10 text-center space-y-8">
+                <div>
+                    <span class="bg-amber-400 text-slate-900 font-bold text-xs px-4 py-1.5 rounded-full tracking-wider uppercase shadow-lg">Celeste Nuñez · 6.º A · Escuela 23</span>
+                    <h2 class="text-3xl sm:text-5xl font-extrabold font-game text-white mt-4 drop-shadow-md">SuperMente · Desafío escolar</h2>
+                    <p class="text-slate-300 mt-2 text-sm sm:text-base max-w-xl mx-auto font-medium">Elegí una materia, respondé y leé la explicación después de cada pregunta.</p>
+                </div>
+
+                <!-- Selección de Materia -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
+                    <!-- Matemáticas -->
+                    <div onclick="app.selectCategory('math')" class="card-bounce bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-3xl text-white cursor-pointer border-2 border-blue-300/40 shadow-xl flex items-center gap-5">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0 shadow-inner">📐</div>
+                        <div class="text-left">
+                            <h3 class="font-game text-2xl font-bold text-yellow-300">Matemáticas</h3>
+                            <p class="text-xs text-blue-100 mt-1 font-medium">Fracciones, porcentajes, áreas, perímetros y ecuaciones sencillas.</p>
+                        </div>
+                    </div>
+
+                    <!-- Lenguaje -->
+                    <div onclick="app.selectCategory('lang')" class="card-bounce bg-gradient-to-br from-rose-500 to-pink-600 p-6 rounded-3xl text-white cursor-pointer border-2 border-rose-300/40 shadow-xl flex items-center gap-5">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0 shadow-inner">📚</div>
+                        <div class="text-left">
+                            <h3 class="font-game text-2xl font-bold text-rose-200">Lenguaje</h3>
+                            <p class="text-xs text-rose-100 mt-1 font-medium">Sujeto y predicado, ortografía, sinónimos, antónimos y gramática.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sociales -->
+                    <div onclick="app.selectCategory('social')" class="card-bounce bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-3xl text-white cursor-pointer border-2 border-amber-300/40 shadow-xl flex items-center gap-5">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0 shadow-inner">🌍</div>
+                        <div class="text-left">
+                            <h3 class="font-game text-2xl font-bold text-amber-200">Ciencias Sociales</h3>
+                            <p class="text-xs text-amber-100 mt-1 font-medium">Geografía de continentes, historia, mapas, relieve y ciudadanía.</p>
+                        </div>
+                    </div>
+
+                    <!-- Naturales -->
+                    <div onclick="app.selectCategory('natural')" class="card-bounce bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-3xl text-white cursor-pointer border-2 border-emerald-300/40 shadow-xl flex items-center gap-5">
+                        <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0 shadow-inner">🔬</div>
+                        <div class="text-left">
+                            <h3 class="font-game text-2xl font-bold text-emerald-200">Ciencias Naturales</h3>
+                            <p class="text-xs text-emerald-100 mt-1 font-medium">Cuerpo humano, la célula, ecosistemas y la cadena alimentaria.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="w-full rounded-2xl bg-violet-700 p-4 font-bold text-white" onclick="app.selectCategory('tech')">💻 Tecnología, Diseño y Programación</button>
+                <div class="bg-slate-950/80 p-4 rounded-2xl border border-white/10 inline-flex flex-col sm:flex-row items-center gap-4">
+                    <span class="font-bold text-slate-300 text-xs uppercase tracking-wider">Modo de Juego:</span>
+                    <div class="flex gap-2">
+                        <button onclick="app.setDifficulty('relaxed')" id="diff-relaxed" class="diff-btn px-4 py-2 rounded-xl text-xs font-bold transition">Sin Prisa (Sin Tiempo)</button>
+                        <button onclick="app.setDifficulty('medium')" id="diff-medium" class="diff-btn px-4 py-2 rounded-xl text-xs font-bold transition">Normal (20s)</button>
+                        <button onclick="app.setDifficulty('hard')" id="diff-hard" class="diff-btn px-4 py-2 rounded-xl text-xs font-bold transition">Rápido (12s)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. PANTALLA DEL JUEGO -->
+            <div id="game-screen" class="hidden p-5 sm:p-8 space-y-5">
+                <!-- Barra superior de estado -->
+                <div class="flex justify-between items-center bg-slate-950/80 p-3.5 rounded-2xl border border-white/10">
+                    <div class="flex items-center gap-2">
+                        <span id="game-category-badge" class="px-3.5 py-1 bg-amber-400 text-slate-900 rounded-xl text-xs font-bold uppercase tracking-wider font-game">Materia</span>
+                        <span id="game-difficulty-badge" class="px-3 py-1 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold uppercase">Normal</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div id="streak-counter" class="text-xs text-amber-400 font-bold flex items-center gap-1 bg-amber-950/40 border border-amber-800/50 px-3 py-1 rounded-xl">
+                            <i class="fas fa-fire text-amber-400"></i> Racha: <span id="streak-val" class="text-amber-300 font-extrabold text-sm">0</span>
+                        </div>
+                        <div class="text-slate-300 text-xs font-bold">
+                            Pregunta <span id="current-q-num" class="text-amber-300 text-base font-extrabold">1</span>/<span id="total-q-num">5</span>
+                        </div>
+                        <div id="timer-box" class="flex items-center gap-1.5 text-rose-400 font-bold bg-rose-950/30 px-2.5 py-1 rounded-xl border border-rose-800/40">
+                            <i class="fas fa-clock text-xs"></i>
+                            <span id="timer" class="text-lg font-extrabold w-6 text-center">20</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta principal -->
+                <div id="question-card" class="bg-gradient-to-b from-slate-800/90 to-slate-900/95 p-6 sm:p-8 rounded-3xl border border-white/15 text-center min-h-[160px] flex flex-col justify-center items-center shadow-inner relative">
+                    <div id="question-visual" class="text-5xl mb-3"></div>
+                    <h3 id="question-text" class="text-lg sm:text-2xl font-bold text-slate-100 leading-snug">Cargando pregunta...</h3>
+                </div>
+
+                <!-- Opciones de Respuesta -->
+                <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <!-- Opciones dinámicas -->
+                </div>
+
+                <!-- Explicación Pedagógica -->
+                <div id="explanation-box" class="hidden p-4 rounded-2xl bg-indigo-950/80 border-2 border-indigo-400/50 text-xs sm:text-sm text-indigo-100">
+                    <div class="font-bold text-amber-300 mb-1 flex items-center gap-2 text-sm font-game">
+                        <i class="fas fa-lightbulb text-amber-400"></i> ¿Sabías que...?
+                    </div>
+                    <p id="explanation-text" class="leading-relaxed"></p>
+                </div>
+
+                <!-- Botón Salir / Menú -->
+                <div class="flex justify-between items-center pt-2">
+                    <button onclick="app.showScreen('welcome-screen')" class="text-slate-400 hover:text-white text-xs font-bold flex items-center gap-1.5 bg-slate-800/60 px-3.5 py-2 rounded-xl transition">
+                        <i class="fas fa-arrow-left"></i> Cambiar Materia
+                    </button>
+                    <button id="next-btn" onclick="app.nextQuestion()" class="hidden bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-extrabold py-2.5 px-6 rounded-2xl text-xs sm:text-sm shadow-lg transition font-game text-base">
+                        Siguiente Pregunta <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. PANTALLA DE RESULTADOS DETALLADA -->
+            <div id="result-screen" class="hidden p-6 sm:p-10 text-center space-y-6">
+                <div id="result-icon-bg" class="w-24 h-24 rounded-3xl mx-auto flex items-center justify-center text-5xl shadow-2xl bg-amber-400/20 text-amber-300 border-2 border-amber-400/40">
+                    🏆
+                </div>
+
+                <div>
+                    <h2 id="result-title" class="text-3xl sm:text-5xl font-extrabold font-game text-white">¡Gran Trabajo!</h2>
+                    <p id="result-subtitle" class="text-slate-300 text-sm sm:text-base mt-2">Aquí tienes los resultados de tu repaso.</p>
+                </div>
+
+                <!-- Resumen de Puntuación -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-xl mx-auto">
+                    <div class="bg-slate-950/80 p-4 rounded-2xl border border-white/10">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Puntaje Obtenido</span>
+                        <span id="result-points" class="text-3xl font-extrabold text-amber-300 font-game">0</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-4 rounded-2xl border border-white/10">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Aciertos</span>
+                        <span id="result-accuracy" class="text-3xl font-extrabold text-emerald-400 font-game">0/0</span>
+                    </div>
+                    <div class="bg-slate-950/80 p-4 rounded-2xl border border-white/10 col-span-2 sm:col-span-1">
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Mejor Racha</span>
+                        <span id="result-max-streak" class="text-3xl font-extrabold text-purple-400 font-game">0</span>
+                    </div>
+                </div>
+
+                <!-- Desglose por Materia -->
+                <div class="bg-slate-950/60 p-4 rounded-2xl border border-white/10 max-w-xl mx-auto text-left">
+                    <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Progreso de Repaso:</h4>
+                    <div id="subject-breakdown" class="space-y-2.5 text-xs">
+                        <!-- Generado dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+                    <button onclick="app.restartGame()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold py-3.5 px-7 rounded-2xl shadow-xl transition text-sm font-game">
+                        <i class="fas fa-redo me-2"></i> Volver a Jugar
+                    </button>
+                    <button onclick="app.showScreen('welcome-screen')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3.5 px-7 rounded-2xl border border-white/10 transition text-sm">
+                        <i class="fas fa-th-large me-2"></i> Elegir Otra Materia
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="text-center py-4 text-slate-300 text-xs font-medium">
+        SuperMente 6° Grado &copy; ¡Aprender jugando es fácil!
+    </footer>
+
+    <!-- LÓGICA DEL JUEGO -->
+    <script>
+        // --- MOTOR DE AUDIO (Web Audio API) ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playTone(freq, duration, type = 'sine', gainVal = 0.1) {
+                if (this.muted) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e) {}
+            }
+
+            playCorrect() {
+                this.playTone(523.25, 0.08, 'triangle');
+                setTimeout(() => this.playTone(659.25, 0.08, 'triangle'), 70);
+                setTimeout(() => this.playTone(783.99, 0.2, 'triangle'), 140);
+            }
+
+            playWrong() {
+                this.playTone(200, 0.12, 'sawtooth', 0.15);
+                setTimeout(() => this.playTone(150, 0.25, 'sawtooth', 0.15), 100);
+            }
+
+            playWin() {
+                const notes = [440, 554.37, 659.25, 880, 1046.50];
+                notes.forEach((n, idx) => {
+                    setTimeout(() => this.playTone(n, 0.18, 'triangle'), idx * 90);
+                });
+            }
+
+            playClick() {
+                this.playTone(450, 0.03, 'sine', 0.05);
+            }
+        }
+
+        // --- BANCO DE PREGUNTAS SUPER ACCESIBLE Y FÁCIL (5to - 6to Primaria) ---
+        function shuffle(items) {
+            const result = [...items];
+            for (let i = result.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [result[i], result[j]] = [result[j], result[i]];
+            }
+            return result;
+        }
+        const questionBank = {
+            tech: [
+                {q:"¿Qué bloque sirve para que un robot repita cuatro veces la misma orden?",options:["Repetir 4 veces","Esperar","Detener","Mostrar texto"],answer:0,icon:"🤖",exp:"Un bucle repite las instrucciones que contiene."},
+                {q:"¿Qué componente detecta si acercás la mano a un tacho inteligente?",options:["Sensor de distancia","Motor","LED","Parlante"],answer:0,icon:"🔧",exp:"El sensor detecta la mano. El motor puede abrir la tapa."},
+                {q:"¿Qué podés compartir para pedir ayuda con el diseño de un personaje?",options:["Un boceto sin datos personales","Tu contraseña","Tu dirección","El teléfono de un compañero"],answer:0,icon:"🎨",exp:"Un boceto permite mostrar la idea sin revelar información personal."}
+            ],
+            math: [
+                { q: "¿Cuánto es 12 × 5?", options: ["60", "50", "55", "65"], answer: 0, icon: "🔢", exp: "¡Muy fácil! Puedes pensar en 10 × 5 = 50 y luego sumarle 2 × 5 = 10. ¡En total da 60!" },
+                { q: "¿Cuánto es la mitad de 100 (100 ÷ 2)?", options: ["50", "25", "40", "60"], answer: 0, icon: "🍕", exp: "Si repartes 100 canicas en 2 grupos iguales, cada grupo se queda con 50." },
+                { q: "Si tienes 1/2 pizza y te dan otra 1/2 pizza, ¿cuántas pizzas enteras tienes?", options: ["1 pizza entera", "2 pizzas", "1/4 de pizza", "3 pizzas"], answer: 0, icon: "🍕", exp: "Dos mitades forman un entero completo (1/2 + 1/2 = 1)." },
+                { q: "¿Cuál es el área de un cuadrado si sus lados miden 5 cm? (Área = lado × lado)", options: ["25 cm²", "20 cm²", "10 cm²", "15 cm²"], answer: 0, icon: "🟦", exp: "Para hallar el área multiplicamos lado por lado: 5 × 5 = 25 cm²." },
+                { q: "¿Cuánto es 100 ÷ 4?", options: ["25", "20", "50", "15"], answer: 0, icon: "🎯", exp: "Imagina un billete de 100 cambiado en 4 monedas iguales: ¡cada una vale 25!" },
+                { q: "¿Cuál es el resultado de 15 + 25?", options: ["40", "35", "50", "45"], answer: 0, icon: "➕", exp: "Sumamos 15 + 5 = 20, y luego 20 + 20 = 40. ¡Excelente!" }
+            ],
+            lang: [
+                { q: "En la frase 'El perro bonito corre', ¿cuál palabra es el ADJETIVO (nos dice cómo es el perro)?", options: ["bonito", "perro", "corre", "El"], answer: 0, icon: "🐕", exp: "'Bonito' es el adjetivo porque describe y nos dice cómo es el perro." },
+                { q: "¿Cuál es el SINÓNIMO (palabra que significa lo mismo) de 'Alegre'?", options: ["Feliz", "Triste", "Enojado", "Cansado"], answer: 0, icon: "😄", exp: "Estar alegre y estar feliz significan exactamente lo mismo." },
+                { q: "¿Cuál de estas palabras es un VERBO (una acción)?", options: ["Saltar", "Pelota", "Azul", "Mesa"], answer: 0, icon: "🏃", exp: "'Saltar' es una acción que podemos realizar, por eso es un verbo." },
+                { q: "¿Cuál es el ANTÓNIMO (lo contrario) de 'Rápido'?", options: ["Lento", "Veloz", "Fuerte", "Alto"], answer: 0, icon: "🐢", exp: "Lo opuesto a ir veloz o rápido es ir lento." },
+                { q: "¿Cuál palabra está escrita CORRECTAMENTE con V?", options: ["Vaca", "Baca", "Baka", "Vaka"], answer: 0, icon: "🐄", exp: "El animal que nos da leche se escribe con V: VACA." }
+            ],
+            social: [
+                { q: "¿Cuál es el océano más grande de nuestro planeta Tierra?", options: ["Océano Pacífico", "Océano Atlántico", "Océano Índico", "Océano Ártico"], answer: 0, icon: "🌊", exp: "El Océano Pacífico es el más grande de todos y cubre una enorme parte del planeta." },
+                { q: "¿En qué continente están las pirámides de Guiza?", options: ["África", "Europa", "Asia", "América"], answer: 0, icon: "🦁", exp: "Egipto está ubicado en el noreste del continente Africano." },
+                { q: "¿Qué representan los mapas?", options: ["Un dibujo de la Tierra o un lugar visto desde arriba", "Un cuento de ficción", "Una foto de las estrellas", "Un libro de matemáticas"], answer: 0, icon: "🗺️", exp: "Un mapa es la representación gráfica y plana de un lugar visto desde arriba." },
+                { q: "¿Cuál de estos es un DERECHO fundamental de todos los niños?", options: ["Derecho a ir a la escuela y aprender", "Derecho a no ordenar la ropa", "Derecho a comer dulces todo el día", "Derecho a no dormir"], answer: 0, icon: "🎒", exp: "La educación es un derecho fundamental que protege el futuro de todos los niños." }
+            ],
+            natural: [
+                { q: "¿Qué es el SOL en realidad?", options: ["Una estrella gigante que nos da luz y calor", "Un planeta de fuego", "Una luna muy grande", "Un cometa atrapado"], answer: 0, icon: "☀️", exp: "El Sol es la estrella en el centro de nuestro sistema solar que nos da vida y energía." },
+                { q: "¿Cuál es el planeta MÁS GRANDE de todo el Sistema Solar?", options: ["Júpiter", "Tierra", "Marte", "Mercurio"], answer: 0, icon: "🪐", exp: "¡Júpiter es un gigante gaseoso! Es tan grande que dentro cabrían más de 1,000 Tierras." },
+                { q: "Cuando el agua se congela en el freezer, ¿a qué estado pasa?", options: ["Sólido", "Líquido", "Gaseoso", "Plasma"], answer: 0, icon: "🧊", exp: "Al enfriarse mucho, el agua se vuelve hielo duro, pasando a estado sólido." },
+                { q: "¿Cómo se llama el proceso por el cual las plantas fabrican su propio alimento usando la luz del sol?", options: ["Fotosíntesis", "Respiración", "Digestión", "Evaporación"], answer: 0, icon: "🌱", exp: "Las plantas usan la luz del sol, agua y aire para alimentarse a través de la fotosíntesis." }
+            ]
+        };
+
+        // --- CLASE PRINCIPAL DEL JUEGO ---
+        class EducationalGamePro {
+            constructor() {
+                this.sound = new SoundEngine();
+                this.score = 0;
+                this.category = 'math';
+                this.difficulty = 'medium'; // relaxed (sin tiempo), medium (20s), hard (12s)
+                this.questions = [];
+                this.currentIndex = 0;
+                this.correctAnswersCount = 0;
+                this.timerInterval = null;
+                this.timeLeft = 20;
+                this.streak = 0;
+                this.maxStreak = 0;
+                this.canAnswer = true;
+                
+                // Estadísticas por materia
+                this.stats = {
+                    math: { played: 0, correct: 0 },
+                    lang: { played: 0, correct: 0 },
+                    social: { played: 0, correct: 0 },
+                    natural: { played: 0, correct: 0 }
+                };
+            }
+
+            init() {
+                this.updateScoreUI();
+                this.setDifficulty('medium');
+            }
+
+            toggleSound() {
+                this.sound.muted = !this.sound.muted;
+                const icon = document.getElementById('sound-icon');
+                if (this.sound.muted) {
+                    icon.className = 'fas fa-volume-mute text-base text-rose-400';
+                } else {
+                    icon.className = 'fas fa-volume-up text-base text-white';
+                    this.sound.playClick();
+                }
+            }
+
+            setDifficulty(diff) {
+                this.sound.playClick();
+                this.difficulty = diff;
+                
+                const buttons = {
+                    relaxed: document.getElementById('diff-relaxed'),
+                    medium: document.getElementById('diff-medium'),
+                    hard: document.getElementById('diff-hard')
+                };
+
+                Object.keys(buttons).forEach(k => {
+                    buttons[k].className = "diff-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800 transition";
+                });
+
+                if (diff === 'relaxed') buttons.relaxed.className = "diff-btn px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 text-slate-950 border border-emerald-300 shadow-lg font-bold";
+                if (diff === 'medium') buttons.medium.className = "diff-btn px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 text-slate-950 border border-amber-300 shadow-lg font-bold";
+                if (diff === 'hard') buttons.hard.className = "diff-btn px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 text-white border border-rose-300 shadow-lg font-bold";
+            }
+
+            showScreen(screenId) {
+                document.getElementById('welcome-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.add('hidden');
+                document.getElementById('result-screen').classList.add('hidden');
+
+                document.getElementById(screenId).classList.remove('hidden');
+            }
+
+            selectCategory(cat) {
+                this.sound.playClick();
+                this.category = cat;
+                this.startGame();
+            }
+
+            startGame() {
+                this.currentIndex = 0;
+                this.correctAnswersCount = 0;
+                this.streak = 0;
+                this.maxStreak = 0;
+                
+                const rawPool = [...questionBank[this.category]];
+                this.questions = shuffle(rawPool).map(q => this.shuffleOptions(q));
+                
+                const catNames = {tech:'Tecnología, Diseño y Programación', math: 'Matemáticas', lang: 'Lenguaje', social: 'Ciencias Sociales', natural: 'Ciencias Naturales' };
+                const diffNames = { relaxed: 'Sin Prisa', medium: 'Normal', hard: 'Rápido' };
+
+                document.getElementById('game-category-badge').textContent = catNames[this.category];
+                document.getElementById('game-difficulty-badge').textContent = diffNames[this.difficulty];
+                document.getElementById('total-q-num').textContent = this.questions.length;
+                
+                this.showScreen('game-screen');
+                this.loadQuestion();
+            }
+
+            shuffleOptions(questionObj) {
+                const copy = { ...questionObj };
+                const originalOptions = [...copy.options];
+                const correctAnswerText = originalOptions[copy.answer];
+                
+                const shuffled = shuffle(originalOptions);
+                copy.options = shuffled;
+                copy.answer = shuffled.indexOf(correctAnswerText);
+                return copy;
+            }
+
+            loadQuestion() {
+                this.canAnswer = true;
+                clearInterval(this.timerInterval);
+                document.getElementById('explanation-box').classList.add('hidden');
+                document.getElementById('next-btn').classList.add('hidden');
+
+                const currentQ = this.questions[this.currentIndex];
+                document.getElementById('current-q-num').textContent = this.currentIndex + 1;
+                document.getElementById('question-visual').textContent = currentQ.icon || "❓";
+                document.getElementById('question-text').textContent = currentQ.q;
+
+                const optionsContainer = document.getElementById('options-container');
+                optionsContainer.innerHTML = '';
+
+                currentQ.options.forEach((optText, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full text-left bg-slate-950/80 hover:bg-slate-800 border-2 border-slate-700/80 hover:border-amber-400 p-4 rounded-2xl font-bold text-slate-100 text-sm sm:text-base transition flex items-center justify-between shadow-md group';
+                    btn.innerHTML = `
+                        <span class="pr-2">${optText}</span>
+                        <span class="w-8 h-8 rounded-xl bg-slate-800 group-hover:bg-amber-400 group-hover:text-slate-950 flex items-center justify-center text-xs font-extrabold text-amber-300 border border-slate-700 transition flex-shrink-0 font-game">${String.fromCharCode(65 + idx)}</span>
+                    `;
+                    btn.onclick = () => this.checkAnswer(idx, btn);
+                    optionsContainer.appendChild(btn);
+                });
+
+                // Control del Temporizador
+                const timerBox = document.getElementById('timer-box');
+                if (this.difficulty === 'relaxed') {
+                    timerBox.classList.add('hidden');
+                } else {
+                    timerBox.classList.remove('hidden');
+                    this.timeLeft = this.difficulty === 'medium' ? 20 : 12;
+                    document.getElementById('timer').textContent = this.timeLeft;
+                    
+                    this.timerInterval = setInterval(() => {
+                        this.timeLeft--;
+                        document.getElementById('timer').textContent = this.timeLeft;
+                        if (this.timeLeft <= 0) {
+                            clearInterval(this.timerInterval);
+                            this.timeOut();
+                        }
+                    }, 1000);
+                }
+            }
+
+            checkAnswer(selectedIndex, btnElement) {
+                if (!this.canAnswer) return;
+                this.canAnswer = false;
+                clearInterval(this.timerInterval);
+
+                const currentQ = this.questions[this.currentIndex];
+                const isCorrect = selectedIndex === currentQ.answer;
+
+                document.getElementById('explanation-text').textContent = currentQ.exp;
+                document.getElementById('explanation-box').classList.remove('hidden');
+                document.getElementById('next-btn').classList.remove('hidden');
+
+                this.stats[this.category].played++;
+
+                if (isCorrect) {
+                    this.sound.playCorrect();
+                    btnElement.className = 'w-full text-left bg-emerald-900/90 text-emerald-100 border-2 border-emerald-400 p-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-between shadow-lg animate-pop';
+                    btnElement.innerHTML += `<i class="fas fa-check-circle text-emerald-300 text-xl"></i>`;
+                    
+                    this.correctAnswersCount++;
+                    this.stats[this.category].correct++;
+                    this.streak++;
+                    if (this.streak > this.maxStreak) this.maxStreak = this.streak;
+                    
+                    const basePoints = 20;
+                    const timeBonus = this.difficulty !== 'relaxed' ? this.timeLeft * 2 : 5;
+                    const streakBonus = (this.streak - 1) * 5;
+                    
+                    this.score += (basePoints + timeBonus + streakBonus);
+                    this.updateScoreUI();
+
+                } else {
+                    this.sound.playWrong();
+                    btnElement.className = 'w-full text-left bg-rose-900/90 text-rose-100 border-2 border-rose-400 p-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-between shadow-lg animate-shake';
+                    btnElement.innerHTML += `<i class="fas fa-times-circle text-rose-300 text-xl"></i>`;
+                    
+                    this.streak = 0;
+
+                    const buttons = document.getElementById('options-container').children;
+                    buttons[currentQ.answer].className = 'w-full text-left bg-emerald-950/60 text-emerald-200 border-2 border-emerald-500/60 p-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-between';
+                }
+
+                this.updateStreakUI();
+            }
+
+            timeOut() {
+                if (!this.canAnswer) return;
+                this.canAnswer = false;
+                this.sound.playWrong();
+                
+                this.stats[this.category].played++;
+                this.streak = 0;
+                this.updateStreakUI();
+
+                const currentQ = this.questions[this.currentIndex];
+                const buttons = document.getElementById('options-container').children;
+                buttons[currentQ.answer].className = 'w-full text-left bg-amber-950/80 text-amber-200 border-2 border-amber-400 p-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-between animate-shake';
+
+                document.getElementById('explanation-text').textContent = "¡Se acabó el tiempo! " + currentQ.exp;
+                document.getElementById('explanation-box').classList.remove('hidden');
+                document.getElementById('next-btn').classList.remove('hidden');
+            }
+
+            nextQuestion() {
+                this.sound.playClick();
+                this.currentIndex++;
+                if (this.currentIndex < this.questions.length) {
+                    this.loadQuestion();
+                } else {
+                    this.finishGame();
+                }
+            }
+
+            updateStreakUI() {
+                document.getElementById('streak-val').textContent = this.streak;
+            }
+
+            updateScoreUI() {
+                document.getElementById('global-score').textContent = this.score;
+            }
+
+            finishGame() {
+                this.showScreen('result-screen');
+                
+                const total = this.questions.length;
+                const ratio = this.correctAnswersCount / total;
+
+                document.getElementById('result-accuracy').textContent = `${this.correctAnswersCount}/${total}`;
+                document.getElementById('result-points').textContent = this.score;
+                document.getElementById('result-max-streak').textContent = this.maxStreak;
+
+                const titleEl = document.getElementById('result-title');
+                const subEl = document.getElementById('result-subtitle');
+                const iconBg = document.getElementById('result-icon-bg');
+
+                if (ratio >= 0.8) {
+                    this.sound.playWin();
+                    titleEl.textContent = "¡Genio Escolar!";
+                    subEl.textContent = "¡Dominas este tema de 6to grado a la perfección!";
+                    iconBg.textContent = "🌟";
+                    if (typeof confetti === 'function') {
+                        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    }
+                } else if (ratio >= 0.5) {
+                    this.sound.playCorrect();
+                    titleEl.textContent = "¡Muy Buen Trabajo!";
+                    subEl.textContent = "Tienes buenos conocimientos. ¡Sigue así!";
+                    iconBg.textContent = "👍";
+                } else {
+                    this.sound.playWrong();
+                    titleEl.textContent = "¡Buen Intento!";
+                    subEl.textContent = "Lee las explicaciones y vuelve a intentarlo para mejorar.";
+                    iconBg.textContent = "📚";
+                }
+
+                this.renderSubjectBreakdown();
+            }
+
+            renderSubjectBreakdown() {
+                const container = document.getElementById('subject-breakdown');
+                container.innerHTML = '';
+
+                const catLabels = { math: 'Matemáticas', lang: 'Lenguaje', social: 'Ciencias Sociales', natural: 'Ciencias Naturales' };
+
+                Object.keys(this.stats).forEach(cat => {
+                    const st = this.stats[cat];
+                    const percentage = st.played > 0 ? Math.round((st.correct / st.played) * 100) : 0;
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between bg-slate-900 p-3 rounded-xl border border-white/5';
+                    row.innerHTML = `
+                        <span class="font-semibold text-slate-200">${catLabels[cat]}</span>
+                        <div class="flex items-center gap-3">
+                            <div class="w-24 bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-amber-400 to-yellow-300 h-full" style="width: ${percentage}%"></div>
+                            </div>
+                            <span class="font-mono font-bold text-amber-300 w-10 text-right">${percentage}%</span>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            restartGame() {
+                this.startGame();
+            }
+        }
+
+        // --- INICIALIZACIÓN ---
+        let app;
+        window.onload = function() {
+            app = new EducationalGamePro();
+            app.init();
+        };
+    </script>
+</body>
+</html>
