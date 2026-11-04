@@ -176,7 +176,7 @@ let drag=false,lx=0,ly=0;renderer.domElement.style.touchAction='none';renderer.d
 const mc=document.getElementById('map'),ctx=mc.getContext('2d');function map(){ctx.clearRect(0,0,270,200);const mx=x=>86-x*3.85,mz=z=>174-z*5.1;function rect(x1,z1,x2,z2,color){ctx.fillStyle=color;let a=mx(mapX(x1)),b=mx(mapX(x2)),c=mz(mapZ(z1)),d=mz(mapZ(z2));ctx.fillRect(Math.min(a,b),Math.min(c,d),Math.abs(a-b),Math.abs(c-d));}rect(-22,0,24,17,'#e3d8b8');rect(24,0,38,22,'#e3d8b8');rect(24,22,50,29,'#e3d8b8');rect(38,0,50,22,'#d0dfca');rect(-22,17,24,29,'#d0dfca');rect(-22,6,24,9,'#faf5e6');rect(-5,9,5,17,'#faf5e6');ctx.fillStyle='#64796a';ctx.font='10px sans-serif';ctx.fillText('PATIO',108,52);ctx.fillText('HALL',73,110);ctx.fillText('SUM',173,100);ctx.fillText('AV. LAFUENTE',95,192);ctx.strokeStyle='#6d7568';ctx.lineWidth=1;for(let b of coll){if(b.y2-b.y1>2)ctx.strokeRect(mx(b.x1),mz(b.z2),-(b.x2-b.x1)*3.85,(b.z2-b.z1)*5.1);}ctx.fillStyle='#c25f43';ctx.beginPath();ctx.arc(mx(player.x),mz(player.z),4,0,7);ctx.fill();ctx.beginPath();ctx.moveTo(mx(player.x),mz(player.z));ctx.lineTo(mx(player.x-Math.sin(yaw)*2),mz(player.z-Math.cos(yaw)*2));ctx.strokeStyle='#c25f43';ctx.stroke();}
 const horrorPanel=document.createElement('div');
 horrorPanel.style.cssText='position:fixed;inset:0;z-index:9999;background:#111;display:none;grid-template-rows:auto minmax(0,1fr)';
-horrorPanel.innerHTML='<button type="button" style="justify-self:end;margin:6px">Salir al ascensor</button><iframe title="La dimensión desconocida" style="border:0;width:100%;height:100%" allow="fullscreen"></iframe>';
+horrorPanel.innerHTML='<button type="button" style="justify-self:end;margin:6px">Volver al recorrido</button><iframe title="La dimensión desconocida" style="border:0;width:100%;height:100%" allow="fullscreen"></iframe>';
 document.body.append(horrorPanel);
 const horrorFrame=horrorPanel.querySelector('iframe'), horrorExit=horrorPanel.querySelector('button');
 let horrorOpen=false, elevatorArmed=true;
@@ -190,15 +190,23 @@ horrorExit.onclick=closeHorror;
 function escapeHorror(event){if(horrorOpen&&event.code==='Escape'){event.preventDefault();closeHorror();}}
 addEventListener('keydown',escapeHorror,true);
 horrorFrame.addEventListener('load',()=>{if(horrorOpen)horrorFrame.contentDocument?.addEventListener('keydown',escapeHorror,true)});
+const sanMartinButton=document.createElement('button');
+sanMartinButton.type='button';sanMartinButton.textContent='⚑ San Martín · Jugar';
+sanMartinButton.style.cssText='position:fixed;left:12px;bottom:12px;z-index:20;padding:.65rem;background:#182843;color:white;border:1px solid #b6cfff;border-radius:6px';
+sanMartinButton.hidden=true;document.body.append(sanMartinButton);
+sanMartinButton.onclick=()=>openHorror('https://gaspartomasello.github.io/SAN-MARTIN-JUEGO/','San Martín');
+function openHorror(src,title){
+ horrorOpen=true;clearMovement();
+ if(document.pointerLockElement)document.exitPointerLock();
+ horrorPanel.style.display='grid';
+ horrorFrame.title=title;horrorFrame.src=src;horrorExit.focus();
+}
 function checkElevator(){
  const distance=Math.hypot(player.x-mapX(-21.67),player.z-mapZ(7.55));
  if(distance>2.2)elevatorArmed=true;
  if(!started||overview||horrorOpen||!elevatorArmed||distance>1.65||Math.abs(player.y-1.65-Y)>.55)return;
- elevatorArmed=false;horrorOpen=true;clearMovement();
- if(document.pointerLockElement)document.exitPointerLock();
- horrorPanel.style.display='grid';
- horrorFrame.src='./juegos/elpasillo.html';horrorExit.focus();
+ elevatorArmed=false;openHorror('./juegos/elpasillo.html','La dimensión desconocida');
 }
-let prev=performance.now();function animate(t){requestAnimationFrame(animate);let dt=Math.min((t-prev)/1000,.035);prev=t;if(horrorOpen)return;if(started&&!overview){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),norm=Math.hypot(f,s)||1,v=(keys.ShiftLeft?5:2.7)*dt/norm;let dx=(-Math.sin(yaw)*f+Math.cos(yaw)*s)*v,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*s)*v;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz;vy-=12*dt;player.y+=vy*dt;let g=ground(player.x,player.z)+1.65;if(player.y<g){player.y=g;vy=0;}}
+let prev=performance.now();function animate(t){requestAnimationFrame(animate);let dt=Math.min((t-prev)/1000,.035);prev=t;sanMartinButton.hidden=!started||overview||horrorOpen;if(horrorOpen)return;if(started&&!overview){let f=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0),s=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0),norm=Math.hypot(f,s)||1,v=(keys.ShiftLeft?5:2.7)*dt/norm;let dx=(-Math.sin(yaw)*f+Math.cos(yaw)*s)*v,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*s)*v;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz;vy-=12*dt;player.y+=vy*dt;let g=ground(player.x,player.z)+1.65;if(player.y<g){player.y=g;vy=0;}}
 if(overview){camera.position.set(-10,48,5);camera.lookAt(-10,0,12);}else{camera.position.set(player.x,player.y,player.z);camera.rotation.set(pitch,yaw,0,'YXZ');}const ux=unmapX(player.x),uz=unmapZ(player.z);document.getElementById('zone').textContent=uz<0?'Fachada':ux>38&&uz<22?'Patio lateral':ux>24&&uz>22?'Sanitarios / acceso S3':ux>24?'SUM':uz>17?'Patio descubierto':Math.abs(ux)<5&&uz>9?'Hall principal':ux< -12&&uz<6?'Laboratorio':ux< -20?'Ascensor':uz<6&&Math.abs(ux)<1.7?'Vestíbulo':'Pasillo';checkElevator();map();renderer.render(scene,camera);}requestAnimationFrame(animate);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});window.tour={go,toggle,player,scene,coll,ground,blocked,renderer,mapX,mapZ,unmapX,unmapZ};
 </script></html>
