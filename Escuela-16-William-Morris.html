@@ -167,6 +167,8 @@ for(let z of [7,11,15,19])for(let i=0;i<18;i++){let x=25+i*.7,y=Y+3.65-Math.sin(
 for(let z of [9,17]){let hub=ell(37.5,Y+3.4,z,.10,.1,.1,'#5f6766');for(let i=0;i<3;i++){let m=box(37.5,Y+3.4,z,.04,.65,.12,'#69716f');m.rotation.x=i*Math.PI/3;}let ring=new THREE.Mesh(new THREE.TorusGeometry(.38,.016,6,28),mat('#687371'));ring.position.set(37.5,Y+3.4,z);ring.rotation.y=Math.PI/2;scene.add(ring);}
 // Iluminación: paneles blancos, cielorrasos con vigas y luz exterior diurna.
 for(let z of [5,9,13,17,21])box(31,Y+4.1,z,14,.30,.30,'#e4e5df');
+const surveyX=[[-22,120],[-12,335],[-9,356],[-5,412],[0,554],[5,690],[10,771],[24,975],[38,1200],[50,1418]];
+const surveyZ=[[0,828],[6,676],[9,594],[17,436],[22,332],[29,147]];
 for(let x of [-16,-7,3,13,21]){const l=new THREE.PointLight('#f5f6ef',2,8,2);l.position.set(mapX(x),Y+3.2,mapZ(7.5));scene.add(l);}
 for(let z of [7,14,20]){const l=new THREE.PointLight('#fff9f0',2.5,11,2);l.position.set(mapX(31),Y+3.25,mapZ(z));scene.add(l);}
 // Ventanas superiores pequeñas y cornisas de la fachada posterior.
@@ -179,8 +181,6 @@ const evacTexture=new THREE.TextureLoader().load('data:image/jpeg;base64,/9j/4AA
 // Revisión 5: proporciones aproximadas por sector, sin ampliaciones acumuladas.
 // Eje X: 0.8; pasillo: 3.6 de ancho; hall: 8 x 8; patio: fondo ajustado.
 // Survey: aligned wall axes in pixels; drawing is viewed from Av. Lafuente.
-const surveyX=[[-22,120],[-12,335],[-9,356],[-5,412],[0,554],[5,690],[10,771],[24,975],[38,1200],[50,1418]];
-const surveyZ=[[0,828],[6,676],[9,594],[17,436],[22,332],[29,147]];
 function interpolate(v,p){let i=1;while(i<p.length-1&&v>p[i][0])i++;const [a,b]=p[i-1],[c,d]=p[i];return b+(v-a)*(d-b)/(c-a);}
 function mapX(x){return (554-interpolate(x,surveyX))*.045;}
 function mapZ(z){return (828-interpolate(z,surveyZ))*.045;}
