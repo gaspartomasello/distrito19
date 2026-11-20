@@ -221,13 +221,52 @@ scene.updateMatrixWorld(true);
 const allMeshes=[];scene.traverse(m=>{if(m.isMesh)allMeshes.push(m)});
 for(const m of allMeshes){const geo=m.geometry.clone();geo.applyMatrix4(m.matrixWorld);let a=geo.attributes.position;for(let i=0;i<a.count;i++){const r=m.userData.rigidAnchor;a.setX(i,r?mapX(r[0])-(a.getX(i)-r[0]):mapX(a.getX(i)));a.setZ(i,r?mapZ(r[1])+(a.getZ(i)-r[1]):mapZ(a.getZ(i)));}if(geo.index){const ix=geo.index.array;for(let i=0;i<ix.length;i+=3){let k=ix[i+1];ix[i+1]=ix[i+2];ix[i+2]=k;}geo.index.needsUpdate=true;}if(m.userData.readable&&geo.attributes.uv){let uv=geo.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,1-uv.getX(i));uv.needsUpdate=true;}geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();m.removeFromParent();m.geometry=geo;m.position.set(0,0,0);m.rotation.set(0,0,0);m.scale.set(1,1,1);m.updateMatrix();scene.add(m);}
 for(let b of coll){const r=b.rigidAnchor;let a=r?mapX(r[0])-(b.x2-r[0]):mapX(b.x2),c=r?mapX(r[0])-(b.x1-r[0]):mapX(b.x1);b.x1=a;b.x2=c;b.z1=r?mapZ(r[1])+(b.z1-r[1]):mapZ(b.z1);b.z2=r?mapZ(r[1])+(b.z2-r[1]):mapZ(b.z2);}
+// Carpintería del patio: dos hojas centrales, laterales fijos y banderola con malla.
+// Las medidas de las hojas se definen en metros después de ajustar la planta.
+const patioFrame=mat('#a6a598');
+function patioGrid(w,h){const material=gridMaterial().clone();material.map=material.map.clone();material.map.repeat.set(w/.045,h/.045);material.map.needsUpdate=true;return material;}
+for(const q of specs.filter(q=>q.z===17&&!q.rot)){
+ const ends=opening('x',q.x,q.w).map(mapX).sort((a,b)=>a-b),cx=(ends[0]+ends[1])/2;
+ const width=ends[1]-ends[0],leafWidth=Math.min(.95,(width-.22)/2),doorWidth=2*leafWidth;
+ q.patio={cx,width,leafWidth};
+ const z=mapZ(17),height=2.36,top=3.15;
+ function fixed(x,y,w,h,c=patioFrame,solid=false){return box(x,Y+y,z,w,h,.09,c,solid);}
+ function pane(x,bottom,w,h){
+  fixed(x,bottom+h/2,w,h,new THREE.MeshBasicMaterial({color:'#b8c2b9',transparent:true,opacity:.18,depthWrite:false}));
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),patioGrid(w,h));mesh.position.set(x,Y+bottom+h/2,z+.065);scene.add(mesh);
+  for(const xx of [x-w/2,x+w/2])fixed(xx,bottom+h/2,.045,h);
+  for(const yy of [bottom,bottom+h])fixed(x,yy,w,.045);
+ }
+ for(const side of [-1,1]){
+  const w=(width-doorWidth)/2-.045,x=cx+side*(doorWidth/2+.045+w/2);
+  fixed(x,.48,w,.96,patioFrame,true);pane(x,.98,w,height-.98);
+  coll.push({x1:x-w/2,x2:x+w/2,z1:z-.09,z2:z+.09,y1:Y,y2:Y+height});
+  fixed(cx+side*(doorWidth/2+.025),height/2,.05,height,patioFrame,true);
+ }
+ for(let i=0;i<4;i++)pane(ends[0]+width*(i+.5)/4,height+.055,width/4,top-height-.055);
+ fixed(cx,height+.025,width,.07);fixed(cx,top,width,.07);
+}
 // Agrupación por material: menos llamadas de dibujo en computadoras de aula.
 const batches=new Map();for(const m of [...scene.children]){if(!m.isMesh||roofs.includes(m)||Array.isArray(m.material))continue;let list=batches.get(m.material);if(!list)batches.set(m.material,list=[]);list.push(m);}
 for(const [material,list]of batches){if(list.length<2)continue;const gs=list.map(m=>m.geometry.index?m.geometry.toNonIndexed():m.geometry);let g=new THREE.BufferGeometry();for(const key of ['position','normal','uv']){if(!gs.every(a=>a.attributes[key]))continue;const size=gs[0].attributes[key].itemSize,total=gs.reduce((n,a)=>n+a.attributes[key].array.length,0),v=new Float32Array(total);let off=0;for(let a of gs){v.set(a.attributes[key].array,off);off+=a.attributes[key].array.length;}g.setAttribute(key,new THREE.BufferAttribute(v,size));}g.computeBoundingSphere();let m=new THREE.Mesh(g,material);m.castShadow=true;m.receiveShadow=true;for(let old of list)scene.remove(old);scene.add(m);}
 // Puertas a escala del jugador; una hoja permanece fija. Piezas instanciadas por material.
 const doorParts=new Map(),unit=new THREE.BoxGeometry(),glassDoor=new THREE.MeshBasicMaterial({color:0xb8ced2,transparent:true,opacity:.22,depthWrite:false});
 function part(d,side,x,y,z,w,h,t,material){if(!doorParts.has(material))doorParts.set(material,[]);doorParts.get(material).push({d,side,x,y,z,w,h,t});}
-for(const q of specs){const vertical=!!q.rot, f=vertical?mapZ:mapX,c=vertical?q.z:q.x,ends=opening(vertical?'z':'x',c,q.w),mid=(f(ends[0])+f(ends[1]))/2;
+for(const q of specs){
+ if(q.patio){
+  const {cx,leafWidth:l}=q.patio,d={x:cx,z:mapZ(17),ang:0,single:false,base:Y,l,open:true,patio:true};doors.push(d);
+  const grille=patioGrid(l-.09,1.19);
+  for(const side of [-1,1]){
+   part(d,side,l/2,.55,0,l,1.1,.065,patioFrame);
+   part(d,side,l/2,1.72,0,l-.09,1.19,.025,glassDoor);
+   part(d,side,l/2,1.72,.045,l-.09,1.19,.008,grille);
+   for(const x of [.025,l-.025])part(d,side,x,1.18,0,.05,2.36,.075,patioFrame);
+   for(const y of [1.11,2.33])part(d,side,l/2,y,0,l,.055,.075,patioFrame);
+   part(d,side,l-.12,1.0,.06,.15,.035,.055,mat('#515859'));
+  }
+  continue;
+ }
+ const vertical=!!q.rot, f=vertical?mapZ:mapX,c=vertical?q.z:q.x,ends=opening(vertical?'z':'x',c,q.w),mid=(f(ends[0])+f(ends[1]))/2;
  const width=Math.abs(f(ends[0])-f(ends[1])),d={x:vertical?mapX(q.x):mid,z:vertical?mid:mapZ(q.z),ang:vertical?Math.PI/2:0,single:q.z===17||q.x===38||q.rot&&q.z===20.3,base:q.z===0?.6:Y,l:(width-.12)/2,open:true};doors.push(d);if(d.single)d.l*=2;
  for(const side of (d.single?[-1]:[-1,1])){const l=d.l,C=mat(q.z===0?'#ab997d':'#a3abaa');part(d,side,l/2,.55,0,l,1.1,.065,C);part(d,side,l/2,1.72,0,l-.09,1.19,.025,glassDoor);for(const x of [.025,l-.025])part(d,side,x,1.18,0,.05,2.36,.075,C);part(d,side,l/2,2.33,0,l,.06,.075,C);part(d,side,l/2,1.11,0,l,.055,.075,C);part(d,side,l-.12,1.0,.06,.15,.035,.055,mat('#515859'));}
 }
